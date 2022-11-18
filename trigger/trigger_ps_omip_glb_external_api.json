@@ -1,0 +1,48 @@
+{
+	"name": "trigger_ps_omip_glb_external_api",
+	"properties": {
+		"description": "Daily trigger for OMIP data extraction",
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "ExternalAPIAzureFunctionPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "PS_OMIP",
+					"region": "GLB",
+					"is_interval": false,
+					"sourceType": "external_api",
+					"package": "*",
+					"mock": "false"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Week",
+				"interval": 1,
+				"startTime": "2021-05-11T15:53:00",
+				"timeZone": "Romance Standard Time",
+				"schedule": {
+					"minutes": [
+						30
+					],
+					"hours": [
+						8
+					],
+					"weekDays": [
+						"Tuesday",
+						"Wednesday",
+						"Thursday",
+						"Friday",
+						"Saturday"
+					]
+				}
+			}
+		}
+	}
+}

@@ -1,0 +1,586 @@
+{
+	"name": "IngestionEphemeralPipeline",
+	"properties": {
+		"activities": [
+			{
+				"name": "Ingest extracted files",
+				"type": "DatabricksSparkJar",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"mainClassName": "com.repsol.datalake.ingestion.IngestionJobWithMetadata",
+					"parameters": [
+						"-m",
+						"@pipeline().parameters.metadataPath",
+						"-p",
+						"@pipeline().parameters.parentUid",
+						"-u",
+						"@variables('uid')",
+						"-t",
+						"@{if(empty(pipeline().parameters.ts),'null',pipeline().parameters.ts)}"
+					],
+					"libraries": [
+						{
+							"jar": "dbfs:/FileStore/job-jars-ci/ingestion-jar-with-dependencies.jar"
+						}
+					]
+				},
+				"linkedServiceName": {
+					"referenceName": "AzureDatabricksDynamicLinkedService",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"workers": {
+							"value": "@pipeline().parameters.workers",
+							"type": "Expression"
+						},
+						"token": "dbcoar-databricks-token",
+						"clusterVersion": "6.4.x-esr-scala2.11"
+					}
+				}
+			},
+			{
+				"name": "BuildBatchRequest",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "Set httpToken",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 1,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": true
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@concat('https://coreutils', replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), 'akcore.cloudapp.repsol.com/dap-core-extraction-utils/ingestionreadrequestdata')",
+						"type": "Expression"
+					},
+					"method": "GET",
+					"headers": {
+						"Content-Type": "text/plain",
+						"X-Layer": {
+							"value": "staging",
+							"type": "Expression"
+						},
+						"X-Metadata-Path": {
+							"value": "@pipeline().parameters.metadataPath",
+							"type": "Expression"
+						},
+						"X-Landing-Zone": {
+							"value": "sl",
+							"type": "Expression"
+						},
+						"Authorization": {
+							"value": "@concat('Bearer ', variables('httpToken'))",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "Set appIdToken",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "GetAppIdToken",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "appIdToken",
+					"value": {
+						"value": "@activity('GetAppIdToken').output.value",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "GetAppIdToken",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "Ingest extracted files",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": true,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@concat('https://', replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), 'corekv.vault.azure.net/secrets/adapp-extract-id?api-version=7.0')",
+						"type": "Expression"
+					},
+                                        "connectVia": {
+                                                "referenceName":"IntegrationRuntimeFreezer",
+                                                "type": "IntegrationRuntimeReference"
+                                        },
+					"method": "GET",
+					"authentication": {
+						"type": "MSI",
+						"resource": "https://vault.azure.net"
+					}
+				}
+			},
+			{
+				"name": "GetAppSecretToken",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "Ingest extracted files",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": true,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@concat('https://', replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), 'corekv.vault.azure.net/secrets/adsp-extract-secret?api-version=7.0')",
+						"type": "Expression"
+					},
+                                        "connectVia": {
+                                                "referenceName":"IntegrationRuntimeFreezer",
+                                                "type": "IntegrationRuntimeReference"
+                                        },
+					"method": "GET",
+					"authentication": {
+						"type": "MSI",
+						"resource": "https://vault.azure.net"
+					}
+				}
+			},
+			{
+				"name": "Set appSecretToken",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "GetAppSecretToken",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "appSecretToken",
+					"value": {
+						"value": "@activity('GetAppSecretToken').output.value",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "HttpToken",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "Set appIdToken",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Set appSecretToken",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": true,
+					"secureInput": true
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": "https://login.microsoftonline.com/0a25214f-ee52-483c-b96b-dc79f3227a6f/oauth2/v2.0/token",
+					"method": "POST",
+					"headers": {
+						"Content-Type": "application/x-www-form-urlencoded"
+					},
+					"body": {
+						"value": "@concat('client_id=', variables('appIdToken'), '&client_secret=',  encodeUriComponent(variables('appSecretToken')), '&grant_type=client_credentials&scope=https://graph.microsoft.com/.default')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set httpToken",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "HttpToken",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "httpToken",
+					"value": {
+						"value": "@activity('HttpToken').output.access_token",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "IterateOverFiles",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "BuildBatchRequest",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('BuildBatchRequest').output.batchBody",
+						"type": "Expression"
+					},
+					"isSequential": false,
+					"activities": [
+						{
+							"name": "Move file",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "CopySLBlobToAdl",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": false,
+								"parameters": {
+									"p_layer": "staging",
+									"p_prefix_path": {
+										"value": "@item().p_prefix_path",
+										"type": "Expression"
+									},
+									"p_year": {
+										"value": "@item().p_year",
+										"type": "Expression"
+									},
+									"p_month": {
+										"value": "@item().p_month",
+										"type": "Expression"
+									},
+									"p_day": {
+										"value": "@item().p_day",
+										"type": "Expression"
+									},
+									"p_timestamp": {
+										"value": "@item().p_timestamp",
+										"type": "Expression"
+									},
+									"p_file_name": {
+										"value": "@item().p_file_name",
+										"type": "Expression"
+									},
+									"p_business_unit": {
+										"value": "@item().p_business_unit",
+										"type": "Expression"
+									},
+									"p_landing_type": "sl"
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "OperationaLogErrorIngestExtractedFiles",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Ingest extracted files",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "OperationalLogPipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"nivel": "ERROR",
+						"modulo": "INGESTION_EPHEMERAL",
+						"pipelineName": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"logType": "END",
+						"applicationName": {
+							"value": "@pipeline().parameters.applicationName",
+							"type": "Expression"
+						},
+						"dataDate": {
+							"value": "@pipeline().parameters.extractionDate",
+							"type": "Expression"
+						},
+						"datasetName": {
+							"value": "@{split(pipeline().parameters.metadataPath, '/')[4]}",
+							"type": "Expression"
+						},
+						"region": {
+							"value": "@pipeline().parameters.region",
+							"type": "Expression"
+						},
+						"message": {
+							"value": "@concat('Ingest extracted files: ', activity('Ingest extracted files').error.message)",
+							"type": "Expression"
+						},
+						"sourceType": {
+							"value": "ephemeral",
+							"type": "Expression"
+						},
+						"uid": {
+							"value": "@variables('uid')",
+							"type": "Expression"
+						},
+						"parentUid": {
+							"value": "@pipeline().parameters.parentUid",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "CreateDatasetsStringList",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "BuildBatchRequest",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('BuildBatchRequest').output.batchBody",
+						"type": "Expression"
+					},
+					"isSequential": true,
+					"activities": [
+						{
+							"name": "Aux",
+							"type": "SetVariable",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "datasetAux",
+								"value": {
+									"value": "@variables('datasetNames')",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Append Dataset",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "Aux",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "datasetNames",
+								"value": {
+									"value": "@concat(variables('datasetAux'), ',', item().p_dataset_name)",
+									"type": "Expression"
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "ExecuteProcessorPipeline",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "IfManualFiles",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "ProcessorPipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"applicationName": {
+							"value": "@pipeline().parameters.applicationName",
+							"type": "Expression"
+						},
+						"region": {
+							"value": "@pipeline().parameters.region",
+							"type": "Expression"
+						},
+						"datasetName": {
+							"value": "@variables('datasetNames')",
+							"type": "Expression"
+						},
+						"extractionDate": {
+							"value": "@pipeline().parameters.extractionDate",
+							"type": "Expression"
+						},
+						"ts": {
+							"value": "@pipeline().parameters.ts",
+							"type": "Expression"
+						},
+						"parentUid": {
+							"value": "@variables('uid')",
+							"type": "Expression"
+						},
+						"package": {
+							"value": "@pipeline().parameters.package",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "IfManualFiles",
+				"description": "Si el source_type no es manual_files se manda la wildcard en vez de la lista creada anteriormente.",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "CreateDatasetsStringList",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@and(not(empty(activity('BuildBatchRequest').output.batchBody)),equals(activity('BuildBatchRequest').output.batchBody[0].p_source_type,'manual_files'))",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "SetDatasetToWildcard",
+							"type": "SetVariable",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "datasetNames",
+								"value": {
+									"value": "*",
+									"type": "Expression"
+								}
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"metadataPath": {
+				"type": "String"
+			},
+			"applicationName": {
+				"type": "string"
+			},
+			"region": {
+				"type": "string"
+			},
+			"extractionDate": {
+				"type": "string"
+			},
+			"workers": {
+				"type": "string",
+				"defaultValue": "2:8"
+			},
+			"ts": {
+				"type": "string"
+			},
+			"parentUid": {
+				"type": "string"
+			},
+			"package": {
+				"type": "string",
+				"defaultValue": "*"
+			}
+		},
+		"variables": {
+			"uid": {
+				"type": "String",
+				"defaultValue": "@concat('INGESTION#', split(pipeline().parameters.parentUid, '#')[1], '#' , pipeline().parameters.extractionDate, '#' , utcnow('yyyyMMddHHmmssfff'))"
+			},
+			"appIdToken": {
+				"type": "String"
+			},
+			"appSecretToken": {
+				"type": "String"
+			},
+			"httpToken": {
+				"type": "String"
+			},
+			"datasetNames": {
+				"type": "String",
+				"defaultValue": "*"
+			},
+			"datasetAux": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "ingestion"
+		},
+		"annotations": []
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

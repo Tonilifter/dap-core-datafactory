@@ -1,0 +1,149 @@
+{
+	"name": "ArchiverDatalakeRestorationPipeline",
+	"properties": {
+		"activities": [
+			{
+				"name": "Set rootFolders",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Set Namespace",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "rootFolders",
+					"value": {
+						"value": "@if(equals(coalesce(pipeline().parameters.rootFolders, ''), ''), 'raw,processed,ddg,sanited,staging', pipeline().parameters.rootFolders)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "IterateRootFolders",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Set rootFolders",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@split(variables('rootFolders'),',')",
+						"type": "Expression"
+					},
+					"batchCount": 5,
+					"activities": [
+						{
+							"name": "Restore From Archiver",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "BinarySource",
+									"storeSettings": {
+										"type": "AzureBlobFSReadSettings",
+										"recursive": true
+									},
+									"formatSettings": {
+										"type": "BinaryReadSettings"
+									}
+								},
+								"sink": {
+									"type": "BinarySink",
+									"storeSettings": {
+										"type": "AzureDataLakeStoreWriteSettings",
+										"copyBehavior": "PreserveHierarchy"
+									}
+								},
+								"enableStaging": false
+							},
+							"inputs": [
+								{
+									"referenceName": "ArchiverDatalakeRestorationSourceDataset",
+									"type": "DatasetReference",
+									"parameters": {
+										"datalakeContainer": {
+											"value": "@pipeline().parameters.businessUnit",
+											"type": "Expression"
+										},
+										"datalakeRootFolder": {
+											"value": "@item()",
+											"type": "Expression"
+										},
+										"datalakeName": {
+											"value": "@concat(variables('namespace'),'dlar')",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "ArchiverDatalakeRestorationSinkDataset",
+									"type": "DatasetReference",
+									"parameters": {
+										"dl_name": {
+											"value": "@concat(variables('namespace'),pipeline().parameters.businessUnit,'dapdls')",
+											"type": "Expression"
+										},
+										"root_folder": "@item()"
+									}
+								}
+							]
+						}
+					]
+				}
+			},
+			{
+				"name": "Set Namespace",
+				"type": "SetVariable",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "namespace",
+					"value": {
+						"value": "@trim(replace(pipeline().DataFactory,'dfcore',''))",
+						"type": "Expression"
+					}
+				}
+			}
+		],
+		"parameters": {
+			"businessUnit": {
+				"type": "string",
+				"defaultValue": "com"
+			},
+			"rootFolders": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"rootFolders": {
+				"type": "String"
+			},
+			"namespace": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "archiver"
+		},
+		"annotations": []
+	}
+}

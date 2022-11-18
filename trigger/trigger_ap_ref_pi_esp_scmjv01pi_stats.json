@@ -1,0 +1,40 @@
+{
+	"name": "trigger_ap_ref_pi_esp_scmjv01pi_stats",
+	"properties": {
+		"description": "Trigger diario estadísticos Cartagena",
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "PISystemProcessPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "AP_REF_PI",
+					"region": "ESP",
+					"piServer": "SCMJV01PI",
+					"startTime": "y",
+					"endTime": "t",
+					"mode": "stats",
+					"interval": "1d",
+					"historicalExecution": false
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2020-04-15T01:00:00",
+				"timeZone": "Romance Standard Time",
+				"schedule": {
+					"hours": [
+						1
+					]
+				}
+			}
+		}
+	}
+}

@@ -1,0 +1,60 @@
+{
+	"name": "ServiceNowLinkedService",
+	"properties": {
+		"type": "ServiceNow",
+		"annotations": [],
+		"typeProperties": {
+			"endpoint": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "KeyVaultLinkedService",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": {
+					"value": "@{linkedService().endpoint}",
+					"type": "Expression"
+				}
+			},
+			"authenticationType": "Basic",
+			"username": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "KeyVaultLinkedService",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": {
+					"value": "@{linkedService().user_secret}",
+					"type": "Expression"
+				}
+			},
+			"password": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "KeyVaultLinkedService",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": {
+					"value": "@{linkedService().password_secret}",
+					"type": "Expression"
+				}
+			},
+			"useEncryptedEndpoints": true,
+			"useHostVerification": true,
+			"usePeerVerification": true
+		},
+		"parameters": {
+			"endpoint": {
+				"type": "String",
+				"defaultValue": ""
+			},
+			"user_secret": {
+				"type": "String",
+				"defaultValue": ""
+			},
+			"password_secret": {
+				"type": "String",
+				"defaultValue": ""
+			}
+		}
+	}
+}

@@ -1,0 +1,32 @@
+{
+	"name": "trigger_ap_com_inteligencia_cliente_fourth_trigger_glb_teradatacloud",
+	"properties": {
+		"description": "extracion mediante los metadatos de catalogo",
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "TeradataCloudPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "AP_COM_INTELIGENCIA_CLIENTE",
+					"region": "GLB",
+					"is_interval": true,
+					"mock": "false",
+					"package": "fourth_trigger"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2021-03-09T08:00:00",
+				"timeZone": "Romance Standard Time"
+			}
+		}
+	}
+}

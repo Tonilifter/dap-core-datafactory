@@ -1,0 +1,30 @@
+{
+	"name": "trigger_ap_eyp_openwells_fast_oracle",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "OraclePipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "AP_EYP_OPENWELLS_FAST",
+					"region": "GLB",
+					"is_interval": true,
+					"sourceType": "db"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Minute",
+				"interval": 10,
+				"startTime": "2020-12-23T11:17:00Z",
+				"timeZone": "UTC"
+			}
+		}
+	}
+}

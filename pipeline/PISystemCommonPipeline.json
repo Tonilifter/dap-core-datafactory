@@ -1,0 +1,1064 @@
+{
+	"name": "PISystemCommonPipeline",
+	"properties": {
+		"activities": [
+			{
+				"name": "ForEach",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "OperationaLogStart",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Set httpToken",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Set DatalakeName",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@pipeline().parameters.inputJSON.batchBodyPathList",
+						"type": "Expression"
+					},
+					"batchCount": 1,
+					"activities": [
+						{
+							"name": "RequestPIData",
+							"type": "Copy",
+							"dependsOn": [
+								{
+									"activity": "GetBatchBody",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 1,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "BinarySource",
+									"storeSettings": {
+										"type": "HttpReadSettings",
+										"requestMethod": "POST",
+										"additionalHeaders": "X-Requested-With: XMLHttpRequest\nContent-Type: application/json",
+										"requestBody": {
+											"value": "@{activity('GetBatchBody').output.batchBody}",
+											"type": "Expression"
+										},
+										"requestTimeout": ""
+									},
+									"formatSettings": {
+										"type": "BinaryReadSettings"
+									}
+								},
+								"sink": {
+									"type": "BinarySink",
+									"storeSettings": {
+										"type": "AzureDataLakeStoreWriteSettings"
+									}
+								},
+								"enableStaging": false
+							},
+							"inputs": [
+								{
+									"referenceName": "InternalApiDataSetNoSSL",
+									"type": "DatasetReference",
+									"parameters": {
+										"url": {
+											"value": "@concat(pipeline().parameters.inputJSON.webAPIBaseURL, '/batch')",
+											"type": "Expression"
+										},
+										"username": {
+											"value": "@replace(pipeline().parameters.inputJSON.apiUser,'\\\\','\\')",
+											"type": "Expression"
+										},
+										"secret_name": {
+											"value": "@pipeline().parameters.inputJSON.apiSecretName",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "DataLakeBinaryDataset",
+									"type": "DatasetReference",
+									"parameters": {
+										"p_dl_name": {
+											"value": "@variables('datalakeName')",
+											"type": "Expression"
+										},
+										"p_folder_path": "staging",
+										"p_file_name": {
+											"value": "@item().piWebApiRespPath",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						},
+						{
+							"name": "Append DatasetIn",
+							"type": "AppendVariable",
+							"dependsOn": [
+								{
+									"activity": "RequestPIData",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "datasetIn",
+								"value": {
+									"value": "@concat('{\"NAME\":\"', if(equals(pipeline().parameters.mode, 'stats'), 'pi_statistics', if(equals(pipeline().parameters.mode, 'af'), 'pi_af', 'pi_raw')), '\",\"PATH\":\"N/A\", \"NUM_ITEMS\":\"', activity('RequestPIData').output.dataRead,'\"}')",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Append DatasetOut",
+							"type": "AppendVariable",
+							"dependsOn": [
+								{
+									"activity": "RequestPIData",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "datasetOut",
+								"value": {
+									"value": "@concat('{\"NAME\":\"', if(equals(pipeline().parameters.mode, 'stats'), 'pi_statistics', if(equals(pipeline().parameters.mode, 'af'), 'pi_af', 'pi_raw')), '\",\"PATH\":\"adl://', variables('datalakeName'), '.azuredatalakestore.net/staging/', item().piWebApiRespPath, '\",\"NUM_ITEMS\":\"', activity('RequestPIData').output.dataWritten,'\"}')",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "GetBatchBody",
+							"type": "WebActivity",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 1,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": true
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"url": {
+									"value": "@concat('https://coreutils', replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), 'akcore.cloudapp.repsol.com/dap-core-extraction-utils/pisystemreadrequestdata')",
+									"type": "Expression"
+								},
+								"method": "GET",
+								"headers": {
+									"Content-Type": "text/plain",
+									"X-Batch-Body-Path": {
+										"value": "@{item().batchBodyPath}",
+										"type": "Expression"
+									},
+									"Authorization": {
+										"value": "@concat('Bearer ', variables('httpToken'))",
+										"type": "Expression"
+									},
+									"X-Business-Unit": {
+										"value": "@activity('GetMetadata').output.value[0].business_unit",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "OperationaLogStart",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "OperationalLogPipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": false,
+					"parameters": {
+						"nivel": "INFO",
+						"modulo": {
+							"value": "@concat('EXTRACTION_PI', if(equals(pipeline().parameters.mode, 'stats'), '_STATISTICS', if(equals(pipeline().parameters.mode, 'af'), '_AF', '')))",
+							"type": "Expression"
+						},
+						"pipelineName": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"logType": "START",
+						"applicationName": {
+							"value": "@pipeline().parameters.applicationName",
+							"type": "Expression"
+						},
+						"dataDate": {
+							"value": "@formatDateTime(pipeline().parameters.inputJSON.startTime,'yyyy/MM/dd')",
+							"type": "Expression"
+						},
+						"region": {
+							"value": "@pipeline().parameters.region",
+							"type": "Expression"
+						},
+						"sourceType": {
+							"value": "@variables('extractionTool')",
+							"type": "Expression"
+						},
+						"uid": {
+							"value": "@variables('uid')",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "OperationaLogEnd",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Is Historical Execution",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "OperationalLogPipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": false,
+					"parameters": {
+						"nivel": "INFO",
+						"modulo": {
+							"value": "@concat('EXTRACTION_PI', if(equals(pipeline().parameters.mode, 'stats'), '_STATISTICS', if(equals(pipeline().parameters.mode, 'af'), '_AF', '')))",
+							"type": "Expression"
+						},
+						"pipelineName": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"logType": "END",
+						"applicationName": {
+							"value": "@pipeline().parameters.applicationName",
+							"type": "Expression"
+						},
+						"dataDate": {
+							"value": "@formatDateTime(pipeline().parameters.inputJSON.startTime,'yyyy/MM/dd')",
+							"type": "Expression"
+						},
+						"region": {
+							"value": "@pipeline().parameters.region",
+							"type": "Expression"
+						},
+						"sourceType": {
+							"value": "@variables('extractionTool')",
+							"type": "Expression"
+						},
+						"uid": {
+							"value": "@variables('uid')",
+							"type": "Expression"
+						},
+						"datasetIn": {
+							"value": "@variables('datasetIn')",
+							"type": "Expression"
+						},
+						"datasetOut": {
+							"value": "@variables('datasetOut')",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "Is Historical Execution",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Renew Set httpToken",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@pipeline().parameters.historicalExecution",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "IngestPIData",
+							"type": "WebActivity",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 1,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": true
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"url": {
+									"value": "@concat('https://coreutils', replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), 'akcore.cloudapp.repsol.com/dap-core-extraction-utils/pisystemingestdl')",
+									"type": "Expression"
+								},
+								"method": "POST",
+								"headers": {
+									"Content-Type": "application/json",
+									"Authorization": {
+										"value": "@concat('Bearer ', variables('httpToken'))",
+										"type": "Expression"
+									},
+									"X-Pi-Server": {
+										"value": "@pipeline().parameters.piServer",
+										"type": "Expression"
+									},
+									"X-Mode": {
+										"value": "@pipeline().parameters.mode",
+										"type": "Expression"
+									},
+									"X-Application-Name": {
+										"value": "@pipeline().parameters.applicationName",
+										"type": "Expression"
+									},
+									"X-Region": {
+										"value": "@pipeline().parameters.region",
+										"type": "Expression"
+									},
+									"X-Interval": {
+										"value": "@pipeline().parameters.interval",
+										"type": "Expression"
+									},
+									"X-Uid": {
+										"value": "@replace(variables('uid'), 'EXTRACTION', 'INGESTION')",
+										"type": "Expression"
+									},
+									"X-Start-Time": {
+										"value": "@pipeline().parameters.inputJSON.startTime",
+										"type": "Expression"
+									},
+									"X-End-Time": {
+										"value": "@pipeline().parameters.inputJSON.endTime",
+										"type": "Expression"
+									},
+									"X-Business-Unit": {
+										"value": "@activity('GetMetadata').output.value[0].business_unit",
+										"type": "Expression"
+									}
+								},
+								"body": {
+									"value": "@pipeline().parameters.inputJSON",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "OperationaLogErrorIngestPIData",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "IngestPIData",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "OperationalLogPipeline",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"nivel": "ERROR",
+									"modulo": {
+										"value": "@concat('EXTRACTION_PI', if(equals(pipeline().parameters.mode, 'stats'), '_STATISTICS', if(equals(pipeline().parameters.mode, 'af'), '_AF', '')))",
+										"type": "Expression"
+									},
+									"pipelineName": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"logType": "END",
+									"applicationName": {
+										"value": "@pipeline().parameters.applicationName",
+										"type": "Expression"
+									},
+									"dataDate": {
+										"value": "@formatDateTime(pipeline().parameters.inputJSON.startTime,'yyyy/MM/dd')",
+										"type": "Expression"
+									},
+									"datasetName": {
+										"value": "@variables('uid')",
+										"type": "Expression"
+									},
+									"region": {
+										"value": "@pipeline().parameters.region",
+										"type": "Expression"
+									},
+									"message": {
+										"value": "@concat('CopyData: ', activity('IngestPIData').error.message)",
+										"type": "Expression"
+									},
+									"sourceType": {
+										"value": "@variables('extractionTool')",
+										"type": "Expression"
+									},
+									"uid": {
+										"value": "@variables('uid')",
+										"type": "Expression"
+									},
+									"parentUid": {
+										"value": "@trim('')",
+										"type": "Expression"
+									},
+									"datasetIn": {
+										"value": "@trim('')",
+										"type": "Expression"
+									},
+									"datasetOut": {
+										"value": "@trim('')",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "RegisterOKExecDB",
+							"type": "WebActivity",
+							"dependsOn": [
+								{
+									"activity": "IngestPIData",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 1,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"url": {
+									"value": "@concat('https://coreutils', replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), 'akcore.cloudapp.repsol.com/dap-core-extraction-utils/pisystemregexec')",
+									"type": "Expression"
+								},
+								"method": "POST",
+								"headers": {
+									"X-Start-Time": {
+										"value": "@pipeline().parameters.inputJSON.startTime",
+										"type": "Expression"
+									},
+									"X-End-Time": {
+										"value": "@pipeline().parameters.inputJSON.endTime",
+										"type": "Expression"
+									},
+									"X-PI-Server": {
+										"value": "@pipeline().parameters.piServer",
+										"type": "Expression"
+									},
+									"X-Mode": {
+										"value": "@pipeline().parameters.mode",
+										"type": "Expression"
+									},
+									"X-Application-Name": {
+										"value": "@pipeline().parameters.applicationName",
+										"type": "Expression"
+									},
+									"X-Region": {
+										"value": "@pipeline().parameters.region",
+										"type": "Expression"
+									},
+									"X-Interval": {
+										"value": "@pipeline().parameters.interval",
+										"type": "Expression"
+									},
+									"Content-Type": "application/json",
+									"Authorization": {
+										"value": "@concat('Bearer ', variables('httpToken'))",
+										"type": "Expression"
+									}
+								},
+								"body": {
+									"value": "@pipeline().parameters.inputJSON.batchBodyPathList",
+									"type": "Expression"
+								}
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "SetIngestionMetadataPath",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "CopyPIIngestionMetadata",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "metadataPath",
+								"value": {
+									"value": "@activity('CopyPIIngestionMetadata').output.metadataPath",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "IngestPIDataDB",
+							"type": "DatabricksSparkPython",
+							"dependsOn": [
+								{
+									"activity": "SetIngestionMetadataPath",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pythonFile": "dbfs:/FileStore/job-python-ci/pi_system/pi_system_data_ingestion.py",
+								"parameters": [
+									"-app",
+									"@pipeline().parameters.applicationName",
+									"-region",
+									"@pipeline().parameters.region",
+									"-start_date",
+									"@pipeline().parameters.inputJSON.startTime",
+									"-end_date",
+									"@pipeline().parameters.inputJSON.endTime",
+									"-uid",
+									"@replace(variables('uid'), 'EXTRACTION', 'INGESTION')",
+									"-mode",
+									"@pipeline().parameters.mode",
+									"-server",
+									"@pipeline().parameters.piServer",
+									"-metadata_path",
+									"@variables('metadataPath')",
+									"-business_unit",
+									"@activity('GetMetadata').output.value[0].business_unit"
+								],
+								"libraries": [
+									{
+										"pypi": {
+											"package": "azure-common==1.1.26"
+										}
+									},
+									{
+										"whl": "dbfs:/FileStore/whl/dap_core_commons_python-1.0.0-py3-none-any.whl"
+									},
+									{
+										"whl": "dbfs:/FileStore/whl/dap_core_pi_spark-1.0.0-py3-none-any.whl"
+									}
+								]
+							},
+							"linkedServiceName": {
+								"referenceName": "AzureDatabricksDynamicPISystemData74LinkedServiceNew",
+								"type": "LinkedServiceReference",
+								"parameters": {
+									"workers": "2:8",
+									"token": "dbcoar-databricks-token",
+									"clusterVersion": "7.4.x-scala2.12"
+								}
+							}
+						},
+						{
+							"name": "CopyPIIngestionMetadata",
+							"type": "WebActivity",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": true
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"url": {
+									"value": "@concat('https://coreutils', replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), 'akcore.cloudapp.repsol.com/dap-core-extraction-utils/pisystemcopyingestionmetadata')",
+									"type": "Expression"
+								},
+								"method": "POST",
+								"headers": {
+									"Content-Type": "application/json",
+									"Authorization": {
+										"value": "@concat('Bearer ', variables('httpToken'))",
+										"type": "Expression"
+									},
+									"X-Application-Name": {
+										"value": "@pipeline().parameters.applicationName",
+										"type": "Expression"
+									},
+									"X-Region": {
+										"value": "@pipeline().parameters.region",
+										"type": "Expression"
+									},
+									"X-Start-Time": {
+										"value": "@pipeline().parameters.inputJSON.startTime",
+										"type": "Expression"
+									},
+									"X-Business-Unit": {
+										"value": "@activity('GetMetadata').output.value[0].business_unit",
+										"type": "Expression"
+									}
+								},
+								"body": {
+									"value": "@pipeline().parameters.inputJSON",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "OperationaLogErrorIngestPIDataDB",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "IngestPIDataDB",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "OperationalLogPipeline",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"nivel": "ERROR",
+									"modulo": {
+										"value": "@concat('EXTRACTION_PI', if(equals(pipeline().parameters.mode, 'stats'), '_STATISTICS', if(equals(pipeline().parameters.mode, 'af'), '_AF', '')))",
+										"type": "Expression"
+									},
+									"pipelineName": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"logType": "END",
+									"applicationName": {
+										"value": "@pipeline().parameters.applicationName",
+										"type": "Expression"
+									},
+									"dataDate": {
+										"value": "@formatDateTime(pipeline().parameters.inputJSON.startTime,'yyyy/MM/dd')",
+										"type": "Expression"
+									},
+									"datasetName": {
+										"value": "@variables('uid')",
+										"type": "Expression"
+									},
+									"region": {
+										"value": "@pipeline().parameters.region",
+										"type": "Expression"
+									},
+									"message": {
+										"value": "@concat('CopyData: ', activity('IngestPIDataDB').error.message)",
+										"type": "Expression"
+									},
+									"sourceType": {
+										"value": "@variables('extractionTool')",
+										"type": "Expression"
+									},
+									"uid": {
+										"value": "@variables('uid')",
+										"type": "Expression"
+									},
+									"parentUid": {
+										"value": "@trim('')",
+										"type": "Expression"
+									},
+									"datasetIn": {
+										"value": "@trim('')",
+										"type": "Expression"
+									},
+									"datasetOut": {
+										"value": "@trim('')",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "HttpToken",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "Set appSecretToken",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Set appIdToken",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": true,
+					"secureInput": true
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": "https://login.microsoftonline.com/0a25214f-ee52-483c-b96b-dc79f3227a6f/oauth2/v2.0/token",
+					"method": "POST",
+					"headers": {
+						"Content-Type": "application/x-www-form-urlencoded"
+					},
+					"body": {
+						"value": "@concat('client_id=', variables('appIdToken'), '&client_secret=',  encodeUriComponent(variables('appSecretToken')), '&grant_type=client_credentials&scope=https://graph.microsoft.com/.default')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set appIdToken",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "GetAppIdToken",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "appIdToken",
+					"value": {
+						"value": "@activity('GetAppIdToken').output.value",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "GetAppIdToken",
+				"type": "WebActivity",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": true,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@concat('https://', replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), 'corekv.vault.azure.net/secrets/adapp-extract-id?api-version=7.0')",
+						"type": "Expression"
+					},
+					"connectVia": {
+						"referenceName": "IntegrationRuntimeFreezer",
+						"type": "IntegrationRuntimeReference"
+					},
+					"method": "GET",
+					"authentication": {
+						"type": "MSI",
+						"resource": "https://vault.azure.net"
+					}
+				}
+			},
+			{
+				"name": "GetAppSecretToken",
+				"type": "WebActivity",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": true,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@concat('https://', replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), 'corekv.vault.azure.net/secrets/adsp-extract-secret?api-version=7.0')",
+						"type": "Expression"
+					},
+					"connectVia": {
+						"referenceName": "IntegrationRuntimeFreezer",
+						"type": "IntegrationRuntimeReference"
+					},
+					"method": "GET",
+					"authentication": {
+						"type": "MSI",
+						"resource": "https://vault.azure.net"
+					}
+				}
+			},
+			{
+				"name": "Set appSecretToken",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "GetAppSecretToken",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "appSecretToken",
+					"value": {
+						"value": "@activity('GetAppSecretToken').output.value",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set httpToken",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "HttpToken",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "httpToken",
+					"value": {
+						"value": "@activity('HttpToken').output.access_token",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "RenewToken",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "ForEach",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": true,
+					"secureInput": true
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": "https://login.microsoftonline.com/0a25214f-ee52-483c-b96b-dc79f3227a6f/oauth2/v2.0/token",
+					"method": "POST",
+					"headers": {
+						"Content-Type": "application/x-www-form-urlencoded"
+					},
+					"body": {
+						"value": "@concat('client_id=', variables('appIdToken'), '&client_secret=',  encodeUriComponent(variables('appSecretToken')), '&grant_type=client_credentials&scope=https://graph.microsoft.com/.default')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Renew Set httpToken",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "RenewToken",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "httpToken",
+					"value": {
+						"value": "@activity('RenewToken').output.access_token",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "GetMetadata",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": {
+							"value": "SELECT * FROM pitagmanager.pi_system_servers WHERE pi_server = '@{pipeline().parameters.piServer}'",
+							"type": "Expression"
+						},
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "AzureSqlDataset",
+						"type": "DatasetReference",
+						"parameters": {
+							"tableName": "pitagmanager.pi_system_servers",
+							"secretName": "db-metadata-secret"
+						}
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "Set DatalakeName",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "GetMetadata",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "datalakeName",
+					"value": {
+						"value": "@concat(replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), activity('GetMetadata').output.value[0].business_unit, 'dapdls')\n\n",
+						"type": "Expression"
+					}
+				}
+			}
+		],
+		"parameters": {
+			"applicationName": {
+				"type": "string",
+				"defaultValue": "AP_REF_PI"
+			},
+			"region": {
+				"type": "string",
+				"defaultValue": "ESP"
+			},
+			"piServer": {
+				"type": "string"
+			},
+			"startTime": {
+				"type": "string"
+			},
+			"endTime": {
+				"type": "string"
+			},
+			"mode": {
+				"type": "string",
+				"defaultValue": "raw"
+			},
+			"interval": {
+				"type": "string",
+				"defaultValue": "1h"
+			},
+			"inputJSON": {
+				"type": "object"
+			},
+			"historicalExecution": {
+				"type": "bool",
+				"defaultValue": false
+			}
+		},
+		"variables": {
+			"datasetName": {
+				"type": "String",
+				"defaultValue": "pi"
+			},
+			"extractionTool": {
+				"type": "String",
+				"defaultValue": "apis"
+			},
+			"datalakeName": {
+				"type": "String"
+			},
+			"uid": {
+				"type": "String",
+				"defaultValue": "@concat('EXTRACTION_PI', if(equals(pipeline().parameters.mode, 'stats'), '_STATISTICS#', if(equals(pipeline().parameters.mode, 'af'), '_AF#', '#')), concat('$',pipeline().parameters.applicationName, '$_'), pipeline().parameters.region, '#', utcnow('yyyy/MM/dd'), '#', utcnow('yyyyMMddHHmmssfff'))"
+			},
+			"datasetIn": {
+				"type": "Array"
+			},
+			"datasetOut": {
+				"type": "Array"
+			},
+			"metadataPath": {
+				"type": "String"
+			},
+			"appIdToken": {
+				"type": "String"
+			},
+			"appSecretToken": {
+				"type": "String"
+			},
+			"httpToken": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "extraction/pi"
+		},
+		"annotations": []
+	}
+}

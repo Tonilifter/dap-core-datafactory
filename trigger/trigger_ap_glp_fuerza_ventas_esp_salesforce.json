@@ -1,0 +1,38 @@
+{
+	"name": "trigger_ap_glp_fuerza_ventas_esp_salesforce",
+	"properties": {
+		"description": "Daily Salesforce ETL",
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "SalesforcePipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "AP_GLP_FUERZA_VENTAS",
+					"region": "ESP",
+					"mock": "false"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2019-06-19T05:00:00",
+				"timeZone": "Romance Standard Time",
+				"schedule": {
+					"minutes": [
+						0
+					],
+					"hours": [
+						23
+					]
+				}
+			}
+		}
+	}
+}

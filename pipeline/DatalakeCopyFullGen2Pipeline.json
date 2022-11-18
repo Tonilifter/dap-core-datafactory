@@ -1,0 +1,169 @@
+{
+	"name": "DatalakeCopyFullGen2Pipeline",
+	"properties": {
+		"activities": [
+			{
+				"name": "IterateRootFoldersFull",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Set datalakeName",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Set storageAccount",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@split(pipeline().parameters.layers, ',')",
+						"type": "Expression"
+					},
+					"batchCount": 5,
+					"activities": [
+						{
+							"name": "ArchiverFull",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "BinarySource",
+									"storeSettings": {
+										"type": "AzureDataLakeStoreReadSettings",
+										"recursive": true,
+										"modifiedDatetimeStart": {
+											"value": "@pipeline().parameters.startDate",
+											"type": "Expression"
+										},
+										"modifiedDatetimeEnd": {
+											"value": "@pipeline().parameters.endDate",
+											"type": "Expression"
+										},
+										"deleteFilesAfterCompletion": false
+									},
+									"formatSettings": {
+										"type": "BinaryReadSettings"
+									}
+								},
+								"sink": {
+									"type": "BinarySink",
+									"storeSettings": {
+										"type": "AzureBlobFSWriteSettings",
+										"copyBehavior": "PreserveHierarchy"
+									}
+								},
+								"enableStaging": false
+							},
+							"inputs": [
+								{
+									"referenceName": "DatalakeSourceDataset",
+									"type": "DatasetReference",
+									"parameters": {
+										"datalakeName": {
+											"value": "@variables('datalakeName')",
+											"type": "Expression"
+										},
+										"root_folder": {
+											"value": "@item()",
+											"type": "Expression"
+										},
+										"servicePrincipal": {
+											"value": "dlsmigrationsp",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "DatalakeGen2SinkDataset",
+									"type": "DatasetReference",
+									"parameters": {
+										"container": {
+											"value": "@item()",
+											"type": "Expression"
+										},
+										"storageAccount": {
+											"value": "@variables('storageAccount')",
+											"type": "Expression"
+										},
+										"servicePrincipal": {
+											"value": "dlsmigrationsp",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						}
+					]
+				}
+			},
+			{
+				"name": "Set datalakeName",
+				"type": "SetVariable",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "datalakeName",
+					"value": {
+						"value": "@concat(replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), pipeline().parameters.businessUnit, 'dapdls')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set storageAccount",
+				"type": "SetVariable",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "storageAccount",
+					"value": {
+						"value": "@concat(replace(replace(replace(pipeline().DataFactory, 'dfcore', ''), 'daplatform0101', 'datahub01'), '01l', '01d'), pipeline().parameters.businessUnit, 'dapdls')",
+						"type": "Expression"
+					}
+				}
+			}
+		],
+		"parameters": {
+			"businessUnit": {
+				"type": "string"
+			},
+			"layers": {
+				"type": "string"
+			},
+			"startDate": {
+				"type": "string"
+			},
+			"endDate": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"datalakeName": {
+				"type": "String"
+			},
+			"storageAccount": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "migration"
+		},
+		"annotations": []
+	}
+}

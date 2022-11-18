@@ -1,0 +1,28 @@
+{
+	"name": "trigger_am_ref_modcargas_esp_external",
+	"properties": {
+		"description": "Timer Trigger cada 10 minutos que lanza el DDG para ingestar en processed los ficheros CSV del Modulo de cargas.",
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "DdgPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"processId": "categorizacion-ddg-mc"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Minute",
+				"interval": 10,
+				"startTime": "2020-10-20T07:00:00Z",
+				"timeZone": "UTC"
+			}
+		}
+	}
+}

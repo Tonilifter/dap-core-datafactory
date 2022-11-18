@@ -1,0 +1,303 @@
+{
+	"name": "CopyToSilverPeriodic",
+	"properties": {
+		"activities": [
+			{
+				"name": "OperationaLogStart",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "OperationalLogPipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"nivel": "INFO",
+						"modulo": "COPY_TO_SILVER_REQUESTED",
+						"pipelineName": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"logType": "START",
+						"applicationName": {
+							"value": "@pipeline().parameters.app",
+							"type": "Expression"
+						},
+						"dataDate": {
+							"value": "@pipeline().parameters.datadate",
+							"type": "Expression"
+						},
+						"datasetName": {
+							"value": "@variables('dataset')",
+							"type": "Expression"
+						},
+						"region": {
+							"value": "@pipeline().parameters.region",
+							"type": "Expression"
+						},
+						"uid": {
+							"value": "@variables('uid')",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "OperationaLogError",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "IsTargetDwh",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "OperationalLogPipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"nivel": "ERROR",
+						"modulo": "COPY_TO_SILVER_REQUESTED",
+						"pipelineName": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"logType": "END",
+						"applicationName": {
+							"value": "@pipeline().parameters.app",
+							"type": "Expression"
+						},
+						"dataDate": {
+							"value": "@pipeline().parameters.datadate",
+							"type": "Expression"
+						},
+						"datasetName": {
+							"value": "@variables('dataset')",
+							"type": "Expression"
+						},
+						"region": {
+							"value": "@pipeline().parameters.region",
+							"type": "Expression"
+						},
+						"message": {
+							"value": "@concat('IsTargetDwh: ', activity('IsTargetDwh').error.message)",
+							"type": "Expression"
+						},
+						"uid": {
+							"value": "@variables('uid')",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "OperationaLogEnd",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "IsTargetDwh",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "OperationalLogPipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"nivel": "END",
+						"modulo": "COPY_TO_SILVER_REQUESTED",
+						"pipelineName": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"logType": "END",
+						"applicationName": {
+							"value": "@pipeline().parameters.app",
+							"type": "Expression"
+						},
+						"dataDate": {
+							"value": "@pipeline().parameters.datadate",
+							"type": "Expression"
+						},
+						"datasetName": {
+							"value": "@variables('dataset')",
+							"type": "Expression"
+						},
+						"region": {
+							"value": "@pipeline().parameters.region",
+							"type": "Expression"
+						},
+						"uid": {
+							"value": "@variables('uid')",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "IsTargetDwh",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "OperationaLogStart",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@equals(toLower(pipeline().parameters.target_type), 'dwh')",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "CopyToSilverAdl",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "CopyToSilverAdl",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"business_unit": {
+										"value": "@pipeline().parameters.business_unit",
+										"type": "Expression"
+									},
+									"layer": {
+										"value": "@pipeline().parameters.layer",
+										"type": "Expression"
+									},
+									"app": {
+										"value": "@pipeline().parameters.app",
+										"type": "Expression"
+									},
+									"region": {
+										"value": "@pipeline().parameters.region",
+										"type": "Expression"
+									},
+									"dataset": {
+										"value": "@variables('dataset')",
+										"type": "Expression"
+									},
+									"datadate": {
+										"value": "@pipeline().parameters.datadate",
+										"type": "Expression"
+									},
+									"source_type": {
+										"value": "@pipeline().parameters.source_type",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "CopyToSilverDwh",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "CopyToSilverDwh",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"business_unit": {
+										"value": "@pipeline().parameters.business_unit",
+										"type": "Expression"
+									},
+									"layer": {
+										"value": "@pipeline().parameters.layer",
+										"type": "Expression"
+									},
+									"app": {
+										"value": "@pipeline().parameters.app",
+										"type": "Expression"
+									},
+									"region": {
+										"value": "@pipeline().parameters.region",
+										"type": "Expression"
+									},
+									"dataset": {
+										"value": "@pipeline().parameters.dataset",
+										"type": "Expression"
+									},
+									"datadate": {
+										"value": "@pipeline().parameters.datadate",
+										"type": "Expression"
+									},
+									"source_type": {
+										"value": "@pipeline().parameters.source_type",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"business_unit": {
+				"type": "string"
+			},
+			"layer": {
+				"type": "string",
+				"defaultValue": "raw"
+			},
+			"app": {
+				"type": "string"
+			},
+			"region": {
+				"type": "string",
+				"defaultValue": "GLB"
+			},
+			"dataset": {
+				"type": "string"
+			},
+			"datadate": {
+				"type": "string"
+			},
+			"target_type": {
+				"type": "string",
+				"defaultValue": "adl"
+			},
+			"source_type": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"dataset": {
+				"type": "String",
+				"defaultValue": "@if(empty(pipeline().parameters.dataset), 'null', pipeline().parameters.dataset)"
+			},
+			"uid": {
+				"type": "String",
+				"defaultValue": "@concat('COPY_TO_SILVER_REQUESTED#',pipeline().parameters.app,'_',pipeline().parameters.region,'_',pipeline().parameters.dataset, '#', pipeline().parameters.datadate, '#', utcnow('yyyyMMddHHmmssfff'))"
+			}
+		},
+		"folder": {
+			"name": "utils"
+		},
+		"annotations": []
+	}
+}

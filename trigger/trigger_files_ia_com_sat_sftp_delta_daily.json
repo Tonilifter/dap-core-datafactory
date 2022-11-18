@@ -1,0 +1,40 @@
+{
+	"name": "trigger_files_ia_com_sat_sftp_delta_daily",
+	"properties": {
+		"description": "trigger opp sat cargas delta",
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "FilesPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "IA_COM_SAT",
+					"package": "SAT_COMERCIAL_FULL_INCREMENTAL",
+					"region": "GLB",
+					"mock": "false"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2021-09-14T07:17:00",
+				"timeZone": "Romance Standard Time",
+				"schedule": {
+					"minutes": [
+						0
+					],
+					"hours": [
+						12,
+						14
+					]
+				}
+			}
+		}
+	}
+}

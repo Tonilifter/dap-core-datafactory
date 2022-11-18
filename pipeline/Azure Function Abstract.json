@@ -1,0 +1,115 @@
+{
+	"name": "Azure Function Abstract",
+	"properties": {
+		"activities": [
+			{
+				"name": "AzureFunctionAbstract",
+				"type": "AzureFunctionActivity",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"functionName": {
+						"value": "@pipeline().parameters.functionName",
+						"type": "Expression"
+					},
+					"method": "POST",
+					"headers": {
+						"Content-Type": {
+							"value": "application/json",
+							"type": "Expression"
+						},
+						"DateData": {
+							"value": "@pipeline().parameters.DateData",
+							"type": "Expression"
+						},
+						"applicationName": {
+							"value": "@pipeline().parameters.applicationName",
+							"type": "Expression"
+						},
+						"regionName": {
+							"value": "@pipeline().parameters.regionName",
+							"type": "Expression"
+						},
+						"datasetName": {
+							"value": "@pipeline().parameters.datasetName",
+							"type": "Expression"
+						},
+						"blobStorageLocation": {
+							"value": "@pipeline().parameters.blobStorageLocation",
+							"type": "Expression"
+						},
+						"frequency": {
+							"value": "@pipeline().parameters.frequency",
+							"type": "Expression"
+						}
+					},
+					"body": {
+						"value": "@pipeline().parameters.functionBody",
+						"type": "Expression"
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "AzureFunctionDynamicWithVariablesLinkedService",
+					"type": "LinkedServiceReference"
+				}
+			}
+		],
+		"parameters": {
+			"functionAppUrl": {
+				"type": "string"
+			},
+			"functionKey": {
+				"type": "string"
+			},
+			"functionName": {
+				"type": "string"
+			},
+			"functionBody": {
+				"type": "string"
+			},
+			"DateData": {
+				"type": "string"
+			},
+			"applicationName": {
+				"type": "string"
+			},
+			"regionName": {
+				"type": "string"
+			},
+			"datasetName": {
+				"type": "string"
+			},
+			"blobStorageLocation": {
+				"type": "string"
+			},
+			"frequency": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"functionAppUrl": {
+				"type": "String",
+				"defaultValue": "@pipeline().parameters.functionAppUrl"
+			},
+			"functionKey": {
+				"type": "String",
+				"defaultValue": "@pipeline().parameters.functionKey"
+			},
+			"keyVaultSuffix": {
+				"type": "String",
+				"defaultValue": "@concat(substring(replace(pipeline().parameters.functionAppUrl, 'daplatform0101', ''), 1, sub(length(replace(pipeline().parameters.functionAppUrl, 'daplatform0101', '')), 1)), 'k')"
+			}
+		},
+		"folder": {
+			"name": "utils"
+		},
+		"annotations": []
+	}
+}

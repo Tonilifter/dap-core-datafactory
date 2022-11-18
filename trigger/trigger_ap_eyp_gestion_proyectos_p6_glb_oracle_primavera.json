@@ -1,0 +1,44 @@
+{
+	"name": "trigger_ap_eyp_gestion_proyectos_p6_glb_oracle_primavera",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "OraclePipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "AP_EYP_GESTION_PROYECTOS_P6",
+					"is_interval": false,
+					"mock": "false",
+					"package": "EYP_PRIMAVERA",
+					"region": "GLB",
+					"sourceType": "db",
+					"referenceDate": "@formatDateTime(convertFromUtc(trigger().startTime, 'UTC'), 'yyyy/MM/dd')"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Week",
+				"interval": 1,
+				"startTime": "2021-06-24T09:42:00Z",
+				"timeZone": "UTC",
+				"schedule": {
+					"minutes": [
+						0
+					],
+					"hours": [
+						7
+					],
+					"weekDays": [
+						"Tuesday"
+					]
+				}
+			}
+		}
+	}
+}

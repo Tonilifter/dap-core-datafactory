@@ -1,0 +1,43 @@
+{
+	"name": "AzureSynapseLinkedServiceCopyGob",
+	"type": "Microsoft.DataFactory/factories/linkedservices",
+	"properties": {
+		"parameters": {
+			"p_serverName": {
+				"type": "string"
+			},
+			"p_dbName": {
+				"type": "string"
+			},
+			"p_db_conn_string": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"type": "AzureSqlDW",
+		"typeProperties": {
+			"connectionString": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "KeyVaultDynamicLS",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"keyVaultSuffix": "datdwk"
+					}
+				},
+				"secretName": "@linkedService().p_db_conn_string"
+			},
+			"password": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "KeyVaultDynamicLS",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"keyVaultSuffix": "datdwk"
+					}
+				},
+				"secretName": "dba-password"
+			}
+		}
+	}
+}

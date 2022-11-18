@@ -1,0 +1,141 @@
+{
+	"name": "CopyToGen2BackupRemove",
+	"properties": {
+		"activities": [
+			{
+				"name": "Copy data to gen2",
+				"type": "Copy",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "BinarySource",
+						"storeSettings": {
+							"type": "AzureDataLakeStoreReadSettings",
+							"recursive": true,
+							"wildcardFileName": "*.*",
+							"deleteFilesAfterCompletion": false
+						},
+						"formatSettings": {
+							"type": "BinaryReadSettings"
+						}
+					},
+					"sink": {
+						"type": "BinarySink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings"
+						}
+					},
+					"enableStaging": false
+				},
+				"inputs": [
+					{
+						"referenceName": "DatalakeBinaryCopyToGen2Backup",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_dl_name": {
+								"value": "@pipeline().parameters.p_dl_name",
+								"type": "Expression"
+							},
+							"p_folder_path": {
+								"value": "@pipeline().parameters.p_folder_path",
+								"type": "Expression"
+							}
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "DatalakeArchiverSinkDataset",
+						"type": "DatasetReference",
+						"parameters": {
+							"datalakeContainer": {
+								"value": "@pipeline().parameters.business_unit",
+								"type": "Expression"
+							},
+							"datalakeRootFolder": {
+								"value": "@concat('backup_remove', '/', pipeline().parameters.p_folder_path, '/')",
+								"type": "Expression"
+							},
+							"datalakeName": {
+								"value": "@concat(replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), 'dlar')",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "Delete data from datalake gen1",
+				"type": "Delete",
+				"dependsOn": [
+					{
+						"activity": "Copy data to gen2",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "DatalakeBinaryCopyToGen2Backup",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_dl_name": {
+								"value": "@pipeline().parameters.p_dl_name",
+								"type": "Expression"
+							},
+							"p_folder_path": {
+								"value": "@pipeline().parameters.p_folder_path",
+								"type": "Expression"
+							}
+						}
+					},
+					"enableLogging": false,
+					"storeSettings": {
+						"type": "AzureDataLakeStoreReadSettings",
+						"recursive": true,
+						"wildcardFileName": {
+							"value": "@{pipeline().parameters.check}",
+							"type": "Expression"
+						},
+						"enablePartitionDiscovery": false
+					}
+				}
+			}
+		],
+		"parameters": {
+			"business_unit": {
+				"type": "string"
+			},
+			"p_dl_name": {
+				"type": "string"
+			},
+			"p_folder_path": {
+				"type": "string"
+			},
+			"check": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "utils"
+		},
+		"annotations": []
+	}
+}

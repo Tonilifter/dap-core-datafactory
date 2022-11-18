@@ -1,0 +1,40 @@
+{
+	"name": "trigger_ap_corp_saas_workday_glb_internal_api",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "InternalAPIAzureFunctionPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "AP_CORP_SAAS_WORKDAY",
+					"region": "GLB",
+					"is_interval": false,
+					"package": "*",
+					"mock": "false",
+					"is_durable": false
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2020-11-05T12:00:00Z",
+				"timeZone": "UTC",
+				"schedule": {
+					"minutes": [
+						0
+					],
+					"hours": [
+						7
+					]
+				}
+			}
+		}
+	}
+}

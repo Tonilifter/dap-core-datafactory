@@ -1,0 +1,41 @@
+{
+	"name": "trigger_pi_consolidator_esp_ap_ref_pi_pi_processor",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "ConsolidatorPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"layer": "processed",
+					"source": "raw",
+					"application": "AP_REF_PI",
+					"region": "ESP",
+					"servicePrincipalName": "processor",
+					"businessUnit": "ind",
+					"referenceDate": "@formatDateTime(addDays(convertFromUtc(trigger().startTime, 'Romance Standard Time'), -1),'yyyy/MM/dd')"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2021-05-10T02:30:00",
+				"timeZone": "Romance Standard Time",
+				"schedule": {
+					"minutes": [
+						30
+					],
+					"hours": [
+						2
+					]
+				}
+			}
+		}
+	}
+}

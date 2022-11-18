@@ -1,0 +1,237 @@
+{
+	"name": "MLTraining",
+	"properties": {
+		"description": "Pipeline to execute mllab serving models",
+		"activities": [
+			{
+				"name": "OperationalLogStart",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "OperationalLogPipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"nivel": "INFO",
+						"modulo": "MLLAB_TRAINING",
+						"pipelineName": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"logType": "START",
+						"uid": {
+							"value": "@variables('uid')",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "GetMetadata",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "OperationalLogStart",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": {
+							"value": "SELECT * FROM dbo.mllab WHERE process_id='@{pipeline().parameters.process_id}'",
+							"type": "Expression"
+						},
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "AzureSqlDataset",
+						"type": "DatasetReference",
+						"parameters": {
+							"tableName": "dbo.mllab",
+							"secretName": "db-metadata-secret"
+						}
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "CallMllabTraining",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "GetMetadata",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('GetMetadata').output.value",
+						"type": "Expression"
+					},
+					"isSequential": true,
+					"activities": [
+						{
+							"name": "ExecuteMLTraining",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "MLTraining_endpoint_call",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"process_id": {
+										"value": "@pipeline().parameters.process_id",
+										"type": "Expression"
+									},
+									"referenceDate": {
+										"value": "@pipeline().parameters.referenceDate",
+										"type": "Expression"
+									},
+									"parentUid": {
+										"value": "@pipeline().parameters.parentUid",
+										"type": "Expression"
+									},
+									"client_id": {
+										"value": "@item().client_id",
+										"type": "Expression"
+									},
+									"client_secret": {
+										"value": "@item().client_secret",
+										"type": "Expression"
+									},
+									"version": {
+										"value": "@item().version",
+										"type": "Expression"
+									},
+									"case_id": {
+										"value": "@item().case_id",
+										"type": "Expression"
+									},
+									"experiment_name": {
+										"value": "@item().experiment_name",
+										"type": "Expression"
+									},
+									"pipeline_endpoint_id": {
+										"value": "@item().pipeline_endpoint_id",
+										"type": "Expression"
+									},
+									"pipeline_params": {
+										"value": "@item().pipeline_params",
+										"type": "Expression"
+									},
+									"aks_url": {
+										"value": "@item().aks_url",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "OperationalLogEnd",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "CallMllabTraining",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "OperationalLogPipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"nivel": "INFO",
+						"modulo": "MLLAB_TRAINING",
+						"pipelineName": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"logType": "END",
+						"uid": {
+							"value": "@variables('uid')",
+							"type": "Expression"
+						},
+						"parentUid": {
+							"value": "@variables('parentUid')",
+							"type": "Expression"
+						}
+					}
+				}
+			}
+		],
+		"parameters": {
+			"process_id": {
+				"type": "string"
+			},
+			"referenceDate": {
+				"type": "string"
+			},
+			"parentUid": {
+				"type": "array"
+			}
+		},
+		"variables": {
+			"uid": {
+				"type": "String",
+				"defaultValue": "@concat('MLLAB_TRAINING#',pipeline().parameters.process_id,'#',if(empty(pipeline().parameters.referenceDate),utcnow('yyyy/MM/dd'),pipeline().parameters.referenceDate), '#' , utcnow('yyyyMMddHHmmssfff'))"
+			},
+			"parentUid": {
+				"type": "String",
+				"defaultValue": "@if(not(empty(pipeline().parameters.parentUid)),join(pipeline().parameters.parentUid,','),null)"
+			},
+			"referenceDate": {
+				"type": "String",
+				"defaultValue": "@if(empty(pipeline().parameters.referenceDate),utcnow('yyyy/MM/dd'),pipeline().parameters.referenceDate)"
+			},
+			"client_id": {
+				"type": "String"
+			},
+			"client_secret": {
+				"type": "String"
+			},
+			"run_id": {
+				"type": "String",
+				"defaultValue": "'Finish'"
+			},
+			"status": {
+				"type": "String",
+				"defaultValue": "'running'"
+			},
+			"token": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "ml_lab"
+		},
+		"annotations": []
+	}
+}

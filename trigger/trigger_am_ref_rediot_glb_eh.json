@@ -1,0 +1,30 @@
+{
+  "name": "trigger_am_ref_rediot_glb_eh",
+  "properties": {
+    "annotations": [],
+    "runtimeState": "Stopped",
+    "pipelines": [
+      {
+        "pipelineReference": {
+          "referenceName": "IngestionStreamingPipeline",
+          "type": "PipelineReference"
+        },
+        "parameters": {
+          "applicationName": "AM_REF_REDIOT",
+          "region": "GLB",
+          "workers": "2:4",
+          "mock": "false"
+        }
+      }
+    ],
+    "type": "ScheduleTrigger",
+    "typeProperties": {
+      "recurrence": {
+        "frequency": "Hour",
+        "interval": 1,
+        "startTime": "2021-01-01T01:00:00Z",
+        "timeZone": "Romance Standard Time"
+      }
+    }
+  }
+}

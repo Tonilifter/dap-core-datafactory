@@ -1,0 +1,28 @@
+{
+	"name": "trigger_ap_pi_streaming_esp_eh",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "IngestionStreamingPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "AP_REF_PI",
+					"region": "ESP"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Hour",
+				"interval": 1,
+				"startTime": "2021-02-17T08:30:00",
+				"timeZone": "Romance Standard Time"
+			}
+		}
+	}
+}

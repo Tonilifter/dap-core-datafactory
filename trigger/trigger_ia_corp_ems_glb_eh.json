@@ -1,0 +1,29 @@
+{
+	"name": "trigger_ia_corp_ems_glb_eh",
+	"properties": {
+		"description": "Ingesta de la aplicación IA_CORP_EMS",
+		"annotations": [],
+		"runtimeState": "Started",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "IngestionStreamingPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "IA_CORP_EMS",
+					"region": "GLB"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Hour",
+				"interval": 1,
+				"startTime": "2020-01-10T11:32:00Z",
+				"timeZone": "UTC"
+			}
+		}
+	}
+}

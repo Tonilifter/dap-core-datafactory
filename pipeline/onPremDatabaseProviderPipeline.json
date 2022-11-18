@@ -1,0 +1,478 @@
+{
+	"name": "onPremDatabaseProviderPipeline",
+	"properties": {
+		"activities": [
+			{
+				"name": "OperationaLogStart",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "OperationalLogPipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"nivel": "INFO",
+						"modulo": "USE_CASES",
+						"pipelineName": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"logType": "START",
+						"applicationName": {
+							"value": "@pipeline().parameters.applicationName",
+							"type": "Expression"
+						},
+						"dataDate": {
+							"value": "@variables('referenceDate')",
+							"type": "Expression"
+						},
+						"datasetName": {
+							"value": "@pipeline().parameters.datasetName",
+							"type": "Expression"
+						},
+						"region": {
+							"value": "@pipeline().parameters.region",
+							"type": "Expression"
+						},
+						"sourceType": {
+							"value": "@pipeline().parameters.sourceType",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "CheckFileExists",
+				"type": "GetMetadata",
+				"dependsOn": [
+					{
+						"activity": "SetDateFilter",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "DataLakeParquetCopyPeriodicallySink",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_dl_name": {
+								"value": "@pipeline().parameters.datalakeName",
+								"type": "Expression"
+							},
+							"layer": {
+								"value": "@concat(pipeline().parameters.layer,'/',pipeline().parameters.sourceType)",
+								"type": "Expression"
+							},
+							"app": {
+								"value": "@pipeline().parameters.applicationName",
+								"type": "Expression"
+							},
+							"region": {
+								"value": "@pipeline().parameters.region",
+								"type": "Expression"
+							},
+							"dataset": {
+								"value": "@pipeline().parameters.datasetName",
+								"type": "Expression"
+							},
+							"datadate": {
+								"value": "@variables('dateFilter')",
+								"type": "Expression"
+							}
+						}
+					},
+					"fieldList": [
+						"exists"
+					],
+					"storeSettings": {
+						"type": "AzureDataLakeStoreReadSettings",
+						"recursive": true,
+						"enablePartitionDiscovery": false
+					}
+				}
+			},
+			{
+				"name": "FileExistsCopyData",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "CheckFileExists",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@activity('CheckFileExists').output.exists",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "CopyDatabaseProvider",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "ParquetSource",
+									"storeSettings": {
+										"type": "AzureDataLakeStoreReadSettings",
+										"recursive": true,
+										"wildcardFolderPath": {
+											"value": "@concat(pipeline().parameters.layer,'/',pipeline().parameters.sourceType,'/', pipeline().parameters.applicationName,'/',pipeline().parameters.region,'/',pipeline().parameters.datasetName,'/', variables('dateFilter'))",
+											"type": "Expression"
+										},
+										"wildcardFileName": "*.parquet",
+										"enablePartitionDiscovery": false
+									}
+								},
+								"sink": {
+									"type": "SqlServerSink"
+								},
+								"enableStaging": false,
+								"translator": {
+									"type": "TabularTranslator",
+									"typeConversion": true,
+									"typeConversionSettings": {
+										"allowDataTruncation": true,
+										"treatBooleanAsNumber": false
+									}
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "DataLakeParquetCopyPeriodicallySource",
+									"type": "DatasetReference",
+									"parameters": {
+										"p_dl_name": {
+											"value": "@pipeline().parameters.datalakeName",
+											"type": "Expression"
+										},
+										"layer": {
+											"value": "@pipeline().parameters.layer",
+											"type": "Expression"
+										},
+										"app": {
+											"value": "@pipeline().parameters.applicationName",
+											"type": "Expression"
+										},
+										"region": {
+											"value": "@pipeline().parameters.region",
+											"type": "Expression"
+										},
+										"dataset": {
+											"value": "@pipeline().parameters.datasetName",
+											"type": "Expression"
+										},
+										"datadate": {
+											"value": "@variables('dateFilter')",
+											"type": "Expression"
+										},
+										"source_type": {
+											"value": "@pipeline().parameters.sourceType",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "SQLServerDataset",
+									"type": "DatasetReference",
+									"parameters": {
+										"tableName": {
+											"value": "@pipeline().parameters.tableName",
+											"type": "Expression"
+										},
+										"secretName": {
+											"value": "@pipeline().parameters.secretName",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						},
+						{
+							"name": "OperationaLogErrorCopyDatabaseProvider",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "CopyDatabaseProvider",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "OperationalLogPipeline",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"nivel": "ERROR",
+									"modulo": "USE_CASES",
+									"pipelineName": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"logType": "ERROR",
+									"applicationName": {
+										"value": "@pipeline().parameters.applicationName",
+										"type": "Expression"
+									},
+									"dataDate": {
+										"value": "@variables('referenceDate')",
+										"type": "Expression"
+									},
+									"datasetName": {
+										"value": "@pipeline().parameters.datasetName",
+										"type": "Expression"
+									},
+									"region": {
+										"value": "@pipeline().parameters.region",
+										"type": "Expression"
+									},
+									"message": {
+										"value": "@concat('CopyDatabaseProvider: ', activity('CopyDatabaseProvider').output.error.message)",
+										"type": "Expression"
+									},
+									"sourceType": {
+										"value": "@pipeline().parameters.sourceType",
+										"type": "Expression"
+									},
+									"uid": {
+										"value": "@variables('uid')",
+										"type": "Expression"
+									},
+									"parentUid": {
+										"value": "@trim('')",
+										"type": "Expression"
+									},
+									"datasetIn": {
+										"value": "@trim('')",
+										"type": "Expression"
+									},
+									"datasetOut": {
+										"value": "@trim('')",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "SetDateFilter",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "OperationaLogStart",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "dateFilter",
+					"value": {
+						"value": "@concat('year=', split(variables('referenceDate'),'/')[0], '/month=', split(variables('referenceDate'),'/')[1], '/day=', split(variables('referenceDate'),'/')[2])",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "ExecuteArraySP",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "FileExistsCopyData",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@pipeline().parameters.storedProcedureName",
+						"type": "Expression"
+					},
+					"isSequential": true,
+					"activities": [
+						{
+							"name": "FileExistsSP",
+							"type": "IfCondition",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@activity('CheckFileExists').output.exists",
+									"type": "Expression"
+								},
+								"ifTrueActivities": [
+									{
+										"name": "ExecuteSP",
+										"type": "SqlServerStoredProcedure",
+										"dependsOn": [],
+										"policy": {
+											"timeout": "7.00:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"storedProcedureName": {
+												"value": "@item()",
+												"type": "Expression"
+											}
+										},
+										"linkedServiceName": {
+											"referenceName": "SqlServerLinkedService",
+											"type": "LinkedServiceReference",
+											"parameters": {
+												"secretName": {
+													"value": "@pipeline().parameters.secretName",
+													"type": "Expression"
+												}
+											}
+										}
+									}
+								]
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "OperationaLogEnd",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "ExecuteArraySP",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "OperationalLogPipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"nivel": "INFO",
+						"modulo": "USE_CASES",
+						"pipelineName": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"logType": "END",
+						"applicationName": {
+							"value": "@pipeline().parameters.applicationName",
+							"type": "Expression"
+						},
+						"dataDate": {
+							"value": "@variables('referenceDate')",
+							"type": "Expression"
+						},
+						"datasetName": {
+							"value": "@pipeline().parameters.datasetName",
+							"type": "Expression"
+						},
+						"region": {
+							"value": "@pipeline().parameters.region",
+							"type": "Expression"
+						},
+						"sourceType": {
+							"value": "@pipeline().parameters.sourceType",
+							"type": "Expression"
+						},
+						"uid": {
+							"value": "@variables('uid')",
+							"type": "Expression"
+						}
+					}
+				}
+			}
+		],
+		"parameters": {
+			"tableName": {
+				"type": "string"
+			},
+			"secretName": {
+				"type": "string"
+			},
+			"datalakeName": {
+				"type": "string"
+			},
+			"layer": {
+				"type": "string"
+			},
+			"applicationName": {
+				"type": "string"
+			},
+			"region": {
+				"type": "string"
+			},
+			"datasetName": {
+				"type": "string"
+			},
+			"referenceDate": {
+				"type": "string"
+			},
+			"sourceType": {
+				"type": "string"
+			},
+			"storedProcedureName": {
+				"type": "array"
+			}
+		},
+		"variables": {
+			"referenceDate": {
+				"type": "String",
+				"defaultValue": "@if(empty(pipeline().parameters.referenceDate),utcnow('yyyy/MM/dd'),pipeline().parameters.referenceDate)"
+			},
+			"dateFilter": {
+				"type": "String"
+			},
+			"uid": {
+				"type": "String",
+				"defaultValue": "@concat('$', pipeline().parameters.applicationName, '$_', pipeline().parameters.region, '_' , pipeline().parameters.datasetName,'#', if(empty(pipeline().parameters.referenceDate),utcnow('yyyy/MM/dd'),pipeline().parameters.referenceDate), '#', utcnow('yyyyMMddHHmmssfff'))"
+			}
+		},
+		"folder": {
+			"name": "use_cases"
+		},
+		"annotations": []
+	}
+}

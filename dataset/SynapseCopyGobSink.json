@@ -1,0 +1,54 @@
+{
+	"name": "SynapseCopyGobSink",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "AzureSynapseLinkedServiceCopyGob",
+			"type": "LinkedServiceReference",
+			"parameters": {
+				"p_serverName": {
+					"value": "@dataset().p_serverName",
+					"type": "Expression"
+				},
+				"p_dbName": {
+					"value": "@dataset().p_dbName",
+					"type": "Expression"
+				},
+				"p_db_conn_string": {
+					"value": "@dataset().p_db_conn_string",
+					"type": "Expression"
+				}
+			}
+		},
+		"parameters": {
+			"p_serverName": {
+				"type": "string"
+			},
+			"p_dbName": {
+				"type": "string"
+			},
+			"p_schema": {
+				"type": "string",
+				"defaultValue": "dbo"
+			},
+			"p_tableName": {
+				"type": "string"
+			},
+			"p_db_conn_string": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"type": "AzureSqlDWTable",
+		"schema": [],
+		"typeProperties": {
+			"schema": {
+				"value": "@dataset().p_schema",
+				"type": "Expression"
+			},
+			"table": {
+				"value": "@dataset().p_tableName",
+				"type": "Expression"
+			}
+		}
+	}
+}

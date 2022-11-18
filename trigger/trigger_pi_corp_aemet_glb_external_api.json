@@ -1,0 +1,29 @@
+{
+	"name": "trigger_pi_corp_aemet_glb_external_api",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Started",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "ExternalAPIAzureFunctionPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "PI_CORP_AEMET",
+					"region": "GLB",
+					"mock": "false"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2020-04-21T06:00:00Z",
+				"timeZone": "UTC"
+			}
+		}
+	}
+}

@@ -1,0 +1,968 @@
+{
+	"name": "MonitorPipeline",
+	"properties": {
+		"activities": [
+			{
+				"name": "OperationaLogStart",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Set UID",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "OperationalLogPipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": false,
+					"parameters": {
+						"nivel": "INFO",
+						"modulo": "MONITOR",
+						"pipelineName": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"logType": "START",
+						"dataDate": "",
+						"uid": {
+							"value": "@variables('uid')",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "If LA Query",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "OperationaLogStart",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@not(empty(pipeline().parameters.laQuery))",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "GetLogAnalyticsRec",
+							"type": "WebActivity",
+							"dependsOn": [
+								{
+									"activity": "Set laQueryBody",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "1:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": true
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"url": {
+									"value": "@concat('https://api.loganalytics.io/v1/workspaces/', variables('workspace'),'/query')",
+									"type": "Expression"
+								},
+								"method": "POST",
+								"headers": {
+									"Authorization": {
+										"value": "@concat('Bearer ', variables('httpToken'))",
+										"type": "Expression"
+									},
+									"Content-Type": "application/json"
+								},
+								"body": {
+									"value": "@variables('laQueryBody')",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Set laMessage",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "Set laKO",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "laMessage",
+								"value": {
+									"value": "@activity('GetLogAnalyticsRec').output.tables[0].rows[0][1]",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Set laKO",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "GetLogAnalyticsRec",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "laKO",
+								"value": {
+									"value": "@not(activity('GetLogAnalyticsRec').output.tables[0].rows[0][0])",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Set laQueryBody",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "TargetType",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "laQueryBody",
+								"value": {
+									"value": "@string(json(concat(\n    '{\"timespan\":\"', \n    concat(\n        variables('timespan'), \n        '/', \n        variables('referenceDateTime')\n    ), \n    '\", \"query\":\"', \n    replace(\n        replace(\n            uriComponentToString(\n                replace(\n                    uriComponent(\n                        concat(\n                            variables('laFunctions'), \n                            pipeline().parameters.laQuery\n                        )\n                    ), \n                    '%5C', \n                    '%5C%5C'\n                )\n            ), \n            '\"', \n            '\\\"'\n        ), \n        '#referenceDate#', \n        variables('referenceDate')\n    ), \n    '\"}'\n)))",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "GetAppIdToken",
+							"type": "WebActivity",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": true,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"url": {
+									"value": "@concat('https://', replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), 'corekv.vault.azure.net/secrets/adapp-lacore-id?api-version=7.0')",
+									"type": "Expression"
+								},
+								"method": "GET",
+								"authentication": {
+									"type": "MSI",
+									"resource": "https://vault.azure.net"
+								}
+							}
+						},
+						{
+							"name": "Set appIdToken",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "GetAppIdToken",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "appIdToken",
+								"value": {
+									"value": "@activity('GetAppIdToken').output.value",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "GetAppSecretToken",
+							"type": "WebActivity",
+							"dependsOn": [
+								{
+									"activity": "Set appIdToken",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": true,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"url": {
+									"value": "@concat('https://', replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), 'corekv.vault.azure.net/secrets/adsp-lacore-secret?api-version=7.0')",
+									"type": "Expression"
+								},
+								"method": "GET",
+								"authentication": {
+									"type": "MSI",
+									"resource": "https://vault.azure.net"
+								}
+							}
+						},
+						{
+							"name": "Set appSecretToken",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "GetAppSecretToken",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "appSecretToken",
+								"value": {
+									"value": "@activity('GetAppSecretToken').output.value",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "HttpToken",
+							"type": "WebActivity",
+							"dependsOn": [
+								{
+									"activity": "Set appSecretToken",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": true,
+								"secureInput": true
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"url": {
+									"value": "https://login.microsoftonline.com/0a25214f-ee52-483c-b96b-dc79f3227a6f/oauth2/token",
+									"type": "Expression"
+								},
+								"method": "POST",
+								"headers": {
+									"Content-Type": "application/x-www-form-urlencoded"
+								},
+								"body": {
+									"value": "@concat('client_id=',variables('appIdToken'),'&client_secret=',encodeUriComponent(variables('appSecretToken')),'&grant_type=client_credentials&resource=https://api.loganalytics.io')",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Set httpToken",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "HttpToken",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "httpToken",
+								"value": {
+									"value": "@activity('HttpToken').output.access_token",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "TargetType",
+							"type": "Switch",
+							"dependsOn": [
+								{
+									"activity": "Set httpToken",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"on": {
+									"value": "@replace(replace(pipeline().DataFactory, 'dfcore', ''),'daplatform0101', '')",
+									"type": "Expression"
+								},
+								"cases": [
+									{
+										"value": "l",
+										"activities": [
+											{
+												"name": "Set Lab LA workspace",
+												"type": "SetVariable",
+												"dependsOn": [],
+												"userProperties": [],
+												"typeProperties": {
+													"variableName": "workspace",
+													"value": {
+														"value": "42e812e6-8563-4705-967e-4dd5be805228",
+														"type": "Expression"
+													}
+												}
+											}
+										]
+									},
+									{
+										"value": "t",
+										"activities": [
+											{
+												"name": "Set Test LA workspace",
+												"type": "SetVariable",
+												"dependsOn": [],
+												"userProperties": [],
+												"typeProperties": {
+													"variableName": "workspace",
+													"value": {
+														"value": "42e812e6-8563-4705-967e-4dd5be805228",
+														"type": "Expression"
+													}
+												}
+											}
+										]
+									},
+									{
+										"value": "a",
+										"activities": [
+											{
+												"name": "Set Acc LA workspace",
+												"type": "SetVariable",
+												"dependsOn": [],
+												"userProperties": [],
+												"typeProperties": {
+													"variableName": "workspace",
+													"value": {
+														"value": "42e812e6-8563-4705-967e-4dd5be805228",
+														"type": "Expression"
+													}
+												}
+											}
+										]
+									},
+									{
+										"value": "p",
+										"activities": [
+											{
+												"name": "Set Pro LA workspace",
+												"type": "SetVariable",
+												"dependsOn": [],
+												"userProperties": [],
+												"typeProperties": {
+													"variableName": "workspace",
+													"value": {
+														"value": "cca53411-a96d-494d-b515-ba2ab1dfa174",
+														"type": "Expression"
+													}
+												}
+											}
+										]
+									}
+								],
+								"defaultActivities": [
+									{
+										"name": "Set Default LA workspace",
+										"type": "SetVariable",
+										"dependsOn": [],
+										"userProperties": [],
+										"typeProperties": {
+											"variableName": "workspace",
+											"value": {
+												"value": "42e812e6-8563-4705-967e-4dd5be805228",
+												"type": "Expression"
+											}
+										}
+									}
+								]
+							}
+						},
+						{
+							"name": "Set laMessage error",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "Set laKO error",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "laMessage",
+								"value": {
+									"value": "@activity('GetLogAnalyticsRec').error.Message",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Set laKO error",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "GetLogAnalyticsRec",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "laKO",
+								"value": {
+									"value": "@bool(1)",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "DummyUponSkip",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "Set laMessage",
+									"dependencyConditions": [
+										"Skipped"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "dummy",
+								"value": {
+									"value": "@coalesce('','')",
+									"type": "Expression"
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Set ReferenceDateTime",
+				"type": "SetVariable",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "referenceDateTime",
+					"value": {
+						"value": "@if(empty(pipeline().parameters.referenceDateTime),formatDateTime(utcnow(),'yyyy-MM-dd''T''HH:mm:ssZ'), pipeline().parameters.referenceDateTime)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set Timespan",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Set ReferenceDateTime",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "timespan",
+					"value": {
+						"value": "@if(empty(pipeline().parameters.timespan),'P1DT0H',pipeline().parameters.timespan)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set UID",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Set ReferenceDate",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "uid",
+					"value": {
+						"value": "@concat('MONITOR#',pipeline().parameters.monitorId,'#',variables('referenceDate'), '#' , utcnow('yyyyMMddHHmmssfff'))",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "OperationaLogEnd",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Set finalMessage",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "OperationalLogPipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"nivel": {
+							"value": "@if(or(variables('laKO'), variables('notebookKO')), 'ERROR', 'INFO')",
+							"type": "Expression"
+						},
+						"modulo": "MONITOR",
+						"pipelineName": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"logType": "END",
+						"applicationName": {
+							"value": "@pipeline().parameters.monitorId",
+							"type": "Expression"
+						},
+						"dataDate": {
+							"value": "@variables('referenceDate')",
+							"type": "Expression"
+						},
+						"message": {
+							"value": "@variables('finalMessage')",
+							"type": "Expression"
+						},
+						"uid": {
+							"value": "@variables('uid')",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "Set finalMessage",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "If Notebook",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "finalMessage",
+					"value": {
+						"value": "@concat('Resultado de la monitorización del ', variables('referenceDate'), ' con RunId ', pipeline().RunId, ':', decodeUriComponent('%0A'), if(not(empty(pipeline().parameters.laQuery)), concat('[LogAnalytics] - ', if(variables('laKO'), 'KO', 'OK'), decodeUriComponent('%0A'), variables('laMessage'), decodeUriComponent('%0A')), ''), if(not(empty(pipeline().parameters.notebook)), concat('[Databricks] - ', if(variables('notebookKO'), 'KO', 'OK'), decodeUriComponent('%0A'), variables('notebookMessage'), decodeUriComponent('%0A')), ''))",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set ReferenceDate",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Set Timespan",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "referenceDate",
+					"value": {
+						"value": "@if(empty(pipeline().parameters.referenceDateTime),formatDateTime(utcnow(),'yyyy/MM/dd'), concat(substring(pipeline().parameters.referenceDateTime, 0, 4),'/',substring(pipeline().parameters.referenceDateTime, 5, 2),'/',substring(pipeline().parameters.referenceDateTime, 8, 2)))",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "OperationaLogEndLAKO",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "If LA Query",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "OperationalLogPipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"nivel": "ERROR",
+						"modulo": "MONITOR",
+						"pipelineName": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"logType": "END",
+						"applicationName": {
+							"value": "@pipeline().parameters.monitorId",
+							"type": "Expression"
+						},
+						"dataDate": {
+							"value": "@variables('referenceDate')",
+							"type": "Expression"
+						},
+						"message": {
+							"value": "@concat('Ha ocurrido un error en la monitorización de Log Analytics del ', variables('referenceDate'), ' con RunId ', pipeline().RunId)",
+							"type": "Expression"
+						},
+						"uid": {
+							"value": "@variables('uid')",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "If Notebook",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "If LA Query",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@not(empty(pipeline().parameters.notebook))",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "Notebook",
+							"type": "DatabricksNotebook",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "1:00:00",
+								"retry": 1,
+								"retryIntervalInSeconds": 120,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"notebookPath": {
+									"value": "@pipeline().parameters.notebook",
+									"type": "Expression"
+								},
+								"baseParameters": {
+									"referenceDateTime": {
+										"value": "@variables('referenceDateTime')",
+										"type": "Expression"
+									},
+									"timespan": {
+										"value": "@variables('timespan')",
+										"type": "Expression"
+									},
+									"config": {
+										"value": "@pipeline().parameters.notebook_config",
+										"type": "Expression"
+									},
+									"env": {
+										"value": "@replace(replace(pipeline().DataFactory, 'dfcore', ''),'daplatform0101', '')",
+										"type": "Expression"
+									}
+								},
+								"libraries": [
+									{
+										"maven": {
+											"coordinates": "com.microsoft.azure:azure-keyvault:1.2.4"
+										}
+									},
+									{
+										"maven": {
+											"coordinates": "com.microsoft.azure:azure-client-authentication:1.7.14"
+										}
+									}
+								]
+							},
+							"linkedServiceName": {
+								"referenceName": "AzureDatabricksDynamicLinkedService",
+								"type": "LinkedServiceReference",
+								"parameters": {
+									"workers": "2:4",
+									"token": "dbcoar-databricks-token",
+									"clusterVersion": "6.4.x-esr-scala2.11"
+								}
+							}
+						},
+						{
+							"name": "Set notebookMessage",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "Set notebookKO",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "laMessage",
+								"value": {
+									"value": "@activity('Notebook').output.runOutput.message",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Set notebookKO",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "Notebook",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "laKO",
+								"value": {
+									"value": "@bool(activity('Notebook').output.runOutput.isKO)",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Set notebookMessage error",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "Set notebookKO error",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "laMessage",
+								"value": {
+									"value": "@activity('Notebook').error.Message",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Set notebookKO error",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "Notebook",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "notebookKO",
+								"value": {
+									"value": "@bool(1)",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "DummyUponSkip Notebook",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "Set notebookMessage",
+									"dependencyConditions": [
+										"Skipped"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "dummy",
+								"value": {
+									"value": "@coalesce('','')",
+									"type": "Expression"
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "OperationaLogEndNotebookKO",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "If Notebook",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "OperationalLogPipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"nivel": "ERROR",
+						"modulo": "MONITOR",
+						"pipelineName": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"logType": "END",
+						"applicationName": {
+							"value": "@pipeline().parameters.monitorId",
+							"type": "Expression"
+						},
+						"dataDate": {
+							"value": "@variables('referenceDate')",
+							"type": "Expression"
+						},
+						"message": {
+							"value": "@concat('Ha ocurrido un error en la monitorización de Databricks del ', variables('referenceDate'), ' con RunId ', pipeline().RunId)",
+							"type": "Expression"
+						},
+						"uid": {
+							"value": "@variables('uid')",
+							"type": "Expression"
+						}
+					}
+				}
+			}
+		],
+		"parameters": {
+			"monitorId": {
+				"type": "string",
+				"defaultValue": "MONITOR_ID"
+			},
+			"laQuery": {
+				"type": "string"
+			},
+			"notebook": {
+				"type": "string"
+			},
+			"notebook_config": {
+				"type": "string"
+			},
+			"timespan": {
+				"type": "string"
+			},
+			"referenceDateTime": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"referenceDate": {
+				"type": "String"
+			},
+			"uid": {
+				"type": "String"
+			},
+			"appIdToken": {
+				"type": "String"
+			},
+			"appSecretToken": {
+				"type": "String"
+			},
+			"httpToken": {
+				"type": "String"
+			},
+			"workspace": {
+				"type": "String"
+			},
+			"laQueryBody": {
+				"type": "String"
+			},
+			"laKO": {
+				"type": "Boolean",
+				"defaultValue": false
+			},
+			"laMessage": {
+				"type": "String"
+			},
+			"timespan": {
+				"type": "String"
+			},
+			"notebookKO": {
+				"type": "Boolean",
+				"defaultValue": false
+			},
+			"notebookMessage": {
+				"type": "String"
+			},
+			"finalMessage": {
+				"type": "String"
+			},
+			"referenceDateTime": {
+				"type": "String"
+			},
+			"dummy": {
+				"type": "String"
+			},
+			"notebookOutput": {
+				"type": "String"
+			},
+			"laFunctions": {
+				"type": "String",
+				"defaultValue": "let SummarizeADF = (T: (RunId: string, Start: datetime, End: datetime, Duration: string, InvokedByName: string, PipelineName: string, Status: string, Data: string, ErrorActivityName: string, ErrorMessage: string, Parameters: dynamic, Metadata: dynamic, ReferenceDate: string, Name: string)) {     T     | project Name, ReferenceDate, Start, End, PipelineName, Status, Data, RunId, ErrorActivityName, ErrorMessage, Parameters     | extend End2 = iif(Start > End, now(), End)     | summarize arg_max(End2, *), Executions=count() by Name     | sort by Start desc     | project         ACTIVITY_NAME=strcat(iif(isnotempty(ReferenceDate), strcat('[', ReferenceDate, '] '), '[#referenceDate#] '), iif(isnotempty(PipelineName), strcat(PipelineName, ': '), ''), Name, iif(Executions > 1, strcat(' (', Executions ,')'), '')),         IS_OK=Status == 'Succeeded',         ADDITIONAL_INFO=strcat('[', Status, '] ', iif(isnotempty(RunId), strcat('RunId: ', RunId), ''), iif(isnotempty(ErrorMessage), strcat(' | Error [', ErrorActivityName, ']: ', ErrorMessage), '')),         Name, Start, End }; let SummarizeSearchAKS = (T: (TimeGenerated: datetime, LogEntrySource: string, LogEntry: string, ContainerID: string, ContainerName: string, Namespace: string, Computer: string, PodUid: string, PodName: string, PodStartTime: datetime, TimePodStatus: datetime, LastPodStatus: string), fLogEntry: string, sNamespace: string) {     let T2 = T     | extend END_OK = LogEntry contains fLogEntry     | summarize arg_max(END_OK, Namespace, LogEntry, TimeGenerated) by ReferenceDate=format_datetime(TimeGenerated, 'yyyy/MM/dd')     | project         ACTIVITY_NAME=strcat(iif(isnotempty(ReferenceDate), strcat('[', ReferenceDate, '] '), ''), Namespace),         IS_OK=END_OK,         ADDITIONAL_INFO=iif(END_OK, strcat('[Succeeded] Found log: ', LogEntry), strcat('[Failed] Log not found: ', fLogEntry)),         Name=Namespace, Start=TimeGenerated, End=TimeGenerated     ;     let T2_has_records = toscalar(T2 | summarize count() > 0);     union      (T2 | where T2_has_records == true),     (datatable(ACTIVITY_NAME:string, IS_OK:bool, ADDITIONAL_INFO:string)['',false,'[Missing] Could not find any log'] | extend ACTIVITY_NAME=strcat('[#referenceDate#] ', sNamespace), Name=sNamespace | where T2_has_records == false) }; let SummarizeSearchAML = (T: (TimeGenerated: datetime, LogEntry: string, Level: string, Script: string, Line: string, PipelineRunId: string, StepName: string, ExecutionState: string, StepRunId: string, RunType: string, Cluster: string, ExperimentName: string), fLogEntry: string, sExperiment: string) {     let T2 = T     | extend FOUND_LOG = isempty(fLogEntry) or LogEntry contains fLogEntry     | extend ReferenceDate=format_datetime(TimeGenerated, 'yyyy/MM/dd')     | summarize arg_max(FOUND_LOG, ExperimentName, LogEntry, PipelineRunId, TimeGenerated, ExecutionState), arg_max(TimeGenerated, ExecutionState) by ReferenceDate     | extend Status = coalesce(ExecutionState1,ExecutionState,'Unknown')     | extend END_OK = Status == 'Succeeded'     | project         ACTIVITY_NAME=strcat('[', ReferenceDate, '] ', ExperimentName),         IS_OK=END_OK and FOUND_LOG,         ADDITIONAL_INFO=strcat('[',Status,']', iif(not(isempty(fLogEntry)), iif(FOUND_LOG, strcat(' Found log: ', LogEntry), strcat(' Log not found: ', fLogEntry)), ''), iif(not(isempty(PipelineRunId)), strcat(' | PipelineRunId: ', PipelineRunId), '')),         Name=ExperimentName, Start=TimeGenerated, End=TimeGenerated     ;     let T2_has_records = toscalar(T2 | summarize count() > 0);     union      (T2 | where T2_has_records == true),     (datatable(ACTIVITY_NAME:string, IS_OK:bool, ADDITIONAL_INFO:string)['',false,'[Missing] Could not find any log'] | extend ACTIVITY_NAME=strcat('[#referenceDate#] ', sExperiment), Name=sExperiment | where T2_has_records == false) }; let MonitorSummarize = (T: (ACTIVITY_NAME: string, IS_OK: bool, ADDITIONAL_INFO: string), msg_ok: string = '', msg_ko: string = '') {     T     | extend MONITOR_CONTENT = strcat('- ', ACTIVITY_NAME, iif(isnotempty(ADDITIONAL_INFO), strcat(' -> ', ADDITIONAL_INFO), ''))     | summarize MONITOR_CONTENT=strcat_array(make_set(MONITOR_CONTENT, 250), '\\n') by IS_OK     | extend MONITOR_CONTENT=strcat(iif(IS_OK, coalesce(msg_ok, 'Los siguientes procesos han finalizado correctamente:'), coalesce(msg_ko, 'Se han detectado problemas con los siguientes procesos:')), '\\n', MONITOR_CONTENT)     | summarize         IS_OK=coalesce(min(IS_OK), false),         MONITOR_CONTENT=coalesce(strcat_array(array_sort_desc(make_set(MONITOR_CONTENT, 5)), '\n'), 'The query returned no data') };"
+			}
+		},
+		"folder": {
+			"name": "operations"
+		},
+		"annotations": []
+	}
+}

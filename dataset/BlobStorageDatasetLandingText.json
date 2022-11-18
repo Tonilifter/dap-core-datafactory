@@ -1,0 +1,71 @@
+{
+	"name": "BlobStorageDatasetLandingText",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "BlobStorageLinkedService",
+			"type": "LinkedServiceReference",
+			"parameters": {
+				"businessUnit": "@dataset().businessUnit",
+				"landingType": "sl"
+			}
+		},
+		"parameters": {
+			"date": {
+				"type": "String"
+			},
+			"extractionTool": {
+				"type": "String"
+			},
+			"region": {
+				"type": "String",
+				"defaultValue": "@{pipeline().parameters.region}"
+			},
+			"format": {
+				"type": "String"
+			},
+			"applicationName": {
+				"type": "String",
+				"defaultValue": "@{pipeline().parameters.applicationName}"
+			},
+			"datasetName": {
+				"type": "String"
+			},
+			"businessUnit": {
+				"type": "string"
+			},
+			"delimiter": {
+				"type": "string",
+				"defaultValue": "|"
+			}
+		},
+		"folder": {
+			"name": "extraction/blob"
+		},
+		"annotations": [],
+		"type": "AzureBlob",
+		"typeProperties": {
+			"format": {
+				"type": "TextFormat",
+				"columnDelimiter": {
+					"value": "@dataset().delimiter",
+					"type": "Expression"
+				},
+				"rowDelimiter": "\n",
+				"quoteChar": "\"",
+				"nullValue": "\"\"",
+				"treatEmptyAsNull": false,
+				"skipLineCount": 0,
+				"firstRowAsHeader": true
+			},
+			"fileName": {
+				"value": "@{dataset().datasetName}.@{dataset().format}",
+				"type": "Expression"
+			},
+			"folderPath": {
+				"value": "staging/@{dataset().extractionTool}/@{dataset().applicationName}/@{dataset().region}/@{dataset().datasetName}/@{dataset().date}",
+				"type": "Expression"
+			}
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

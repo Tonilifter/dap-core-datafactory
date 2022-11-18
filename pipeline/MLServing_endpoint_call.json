@@ -1,0 +1,460 @@
+{
+	"name": "MLServing_endpoint_call",
+	"properties": {
+		"description": "Pipeline to execute mllab serving models",
+		"activities": [
+			{
+				"name": "SS Token",
+				"description": "Call to /run-pipeline in MDS microservice in order to run AML pipelines",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "Set SP_secret",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": true,
+					"secureInput": true
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "https://login.microsoftonline.com/0a25214f-ee52-483c-b96b-dc79f3227a6f/oauth2/token",
+						"type": "Expression"
+					},
+					"method": "POST",
+					"headers": {
+						"Content-Type": "application/x-www-form-urlencoded"
+					},
+					"body": {
+						"value": "@concat('client_id=', variables('client_id'), '&client_secret=', variables('client_secret'), '&resource=https://management.azure.com&grant_type=client_credentials')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "GetServicePrincipal",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "OperationaLogStartIterMlServing",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": true,
+					"secureInput": true
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@concat('https://',replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), 'corekv.vault.azure.net/secrets/', pipeline().parameters.client_id,'?api-version=7.0')",
+						"type": "Expression"
+					},
+                                        "connectVia": {
+                                                "referenceName":"IntegrationRuntimeFreezer",
+                                                "type": "IntegrationRuntimeReference"
+                                        },
+					"method": "GET",
+					"authentication": {
+						"type": "MSI",
+						"resource": "https://vault.azure.net"
+					}
+				}
+			},
+			{
+				"name": "Set client_id",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "GetServicePrincipal",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "client_id",
+					"value": {
+						"value": "@activity('GetServicePrincipal').output.value",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "GetSecretToken",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "Set client_id",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": true,
+					"secureInput": true
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@concat('https://',replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), 'corekv.vault.azure.net/secrets/', pipeline().parameters.client_secret,'?api-version=7.0')",
+						"type": "Expression"
+					},
+                                        "connectVia": {
+                                                "referenceName":"IntegrationRuntimeFreezer",
+                                                "type": "IntegrationRuntimeReference"
+                                        },
+					"method": "GET",
+					"authentication": {
+						"type": "MSI",
+						"resource": "https://vault.azure.net"
+					}
+				}
+			},
+			{
+				"name": "Set SP_secret",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "GetSecretToken",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "client_secret",
+					"value": {
+						"value": "@activity('GetSecretToken').output.value",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "MDSDeploy",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "SS Token",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": true
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@concat('https://',  pipeline().parameters.aks_url,'.cloudapp.repsol.com/mds/',pipeline().parameters.version,'/image-deploy\n')",
+						"type": "Expression"
+					},
+					"method": "POST",
+					"headers": {
+						"Authorization": {
+							"value": "@concat('Bearer ', activity('SS token').output.access_token)",
+							"type": "Expression"
+						},
+						"Content-Type": "application/json"
+					},
+					"body": {
+						"value": "{\"vars\": @{pipeline().parameters.env_vars}, \"deploy\":@{pipeline().parameters.deploy_parameters}, \"kind\":\"Job\"}",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "OperationaLogErrorMDSDeploy",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "MDSDeploy",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "OperationalLogPipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"nivel": "ERROR",
+						"modulo": "MLLAB_SERVING",
+						"pipelineName": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"logType": "ERROR",
+						"dataDate": {
+							"value": "@variables('referenceDate')",
+							"type": "Expression"
+						},
+						"message": {
+							"value": "@concat('MDSDeploy:  process_id: ', pipeline().parameters.process_id, ' , code: ',  json(activity('MDSDeploy').error.message).code, ', message: ', json(activity('MDSDeploy').error.message).message)",
+							"type": "Expression"
+						},
+						"uid": {
+							"value": "@variables('uid')",
+							"type": "Expression"
+						},
+						"parentUid": {
+							"value": "@variables('parentUid')",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "If Condition1",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Result",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@contains(variables('result'),'Return value is 0')",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "OperationaLogErrorMDSDeploy_copy1",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "OperationalLogPipeline",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"nivel": "ERROR",
+									"modulo": "MLLAB_SERVING",
+									"pipelineName": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"logType": "ERROR",
+									"dataDate": {
+										"value": "@variables('referenceDate')",
+										"type": "Expression"
+									},
+									"message": {
+										"value": "@concat('MDSDeploy:  process_id: ', pipeline().parameters.process_id, ' , error: ',  variables('result'))",
+										"type": "Expression"
+									},
+									"uid": {
+										"value": "@variables('uid')",
+										"type": "Expression"
+									},
+									"parentUid": {
+										"value": "@variables('parentUid')",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "OperationalLogEnd",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "OperationalLogPipeline",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"nivel": "INFO",
+									"modulo": "MLLAB_SERVING",
+									"pipelineName": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"logType": "INFO",
+									"dataDate": {
+										"value": "@variables('referenceDate')",
+										"type": "Expression"
+									},
+									"uid": {
+										"value": "@variables('uid')",
+										"type": "Expression"
+									},
+									"parentUid": {
+										"value": "@variables('parentUid')",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Result",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "MDSDeploy",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "result",
+					"value": {
+						"value": "@activity('MDSDeploy').output.message",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "OperationaLogStartIterMlServing",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "OperationalLogPipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"nivel": "INFO",
+						"modulo": "MLLAB_SERVING",
+						"pipelineName": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"logType": "INFO",
+						"dataDate": {
+							"value": "@variables('referenceDate')",
+							"type": "Expression"
+						},
+						"message": {
+							"value": "@concat('Starting calling mlserving with process ', pipeline().parameters.process_id)",
+							"type": "Expression"
+						},
+						"uid": {
+							"value": "@variables('uid')",
+							"type": "Expression"
+						},
+						"parentUid": {
+							"value": "@variables('parentUid')",
+							"type": "Expression"
+						}
+					}
+				}
+			}
+		],
+		"parameters": {
+			"client_id": {
+				"type": "string"
+			},
+			"referenceDate": {
+				"type": "string"
+			},
+			"parentUid": {
+				"type": "array"
+			},
+			"client_secret": {
+				"type": "string"
+			},
+			"version": {
+				"type": "string"
+			},
+			"env_vars": {
+				"type": "string"
+			},
+			"deploy_parameters": {
+				"type": "string"
+			},
+			"process_id": {
+				"type": "string"
+			},
+			"uid": {
+				"type": "string"
+			},
+			"case_id": {
+				"type": "string"
+			},
+			"experiment_name": {
+				"type": "string"
+			},
+			"pipeline_endpoint_id": {
+				"type": "string"
+			},
+			"pipeline_params": {
+				"type": "string"
+			},
+			"aks_url": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"uid": {
+				"type": "String",
+				"defaultValue": "@pipeline().parameters.uid"
+			},
+			"parentUid": {
+				"type": "String",
+				"defaultValue": "@if(not(empty(pipeline().parameters.parentUid)),join(pipeline().parameters.parentUid,','),null)"
+			},
+			"referenceDate": {
+				"type": "String",
+				"defaultValue": "@if(empty(pipeline().parameters.referenceDate),utcnow('yyyy/MM/dd'),pipeline().parameters.referenceDate)"
+			},
+			"client_id": {
+				"type": "String"
+			},
+			"client_secret": {
+				"type": "String"
+			},
+			"result": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "ml_lab"
+		},
+		"annotations": []
+	}
+}

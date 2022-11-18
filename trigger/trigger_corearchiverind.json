@@ -1,0 +1,36 @@
+{
+	"name": "trigger_corearchiverind",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "DatalakeArchiverPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"businessUnit": "ind",
+					"deltaEnabled": true
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2020-03-03T12:00:00Z",
+				"timeZone": "UTC",
+				"schedule": {
+					"minutes": [
+						0
+					],
+					"hours": [
+						5
+					]
+				}
+			}
+		}
+	}
+}

@@ -1,0 +1,32 @@
+{
+	"name": "AzureSqlDataset",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "AzureSqlLinkedService",
+			"type": "LinkedServiceReference",
+			"parameters": {
+				"secretName": "@dataset().secretName"
+			}
+		},
+		"parameters": {
+			"tableName": {
+				"type": "String"
+			},
+			"secretName": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "extraction/metadata"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"typeProperties": {
+			"tableName": {
+				"value": "@dataset().tableName",
+				"type": "Expression"
+			}
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

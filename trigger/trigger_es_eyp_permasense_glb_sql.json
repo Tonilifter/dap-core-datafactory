@@ -1,0 +1,30 @@
+{
+	"name": "trigger_es_eyp_permasense_glb_sql",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "SQLServerPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "ES_EYP_PERMASENSE",
+					"region": "GLB",
+					"is_interval": false,
+					"mock": "false"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2019-10-10T00:00:00Z",
+				"timeZone": "UTC"
+			}
+		}
+	}
+}

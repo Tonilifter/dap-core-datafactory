@@ -1,0 +1,45 @@
+{
+	"name": "HttpInternalBasicNoSSLLinkedService",
+	"properties": {
+		"type": "HttpServer",
+		"parameters": {
+			"url": {
+				"type": "String"
+			},
+			"user_name": {
+				"type": "String"
+			},
+			"secret_name": {
+				"type": "String"
+			}
+		},
+		"annotations": [],
+		"typeProperties": {
+			"url": {
+				"value": "@{linkedService().url}",
+				"type": "Expression"
+			},
+			"enableServerCertificateValidation": false,
+			"authenticationType": "Basic",
+			"userName": {
+				"value": "@{linkedService().user_name}",
+				"type": "Expression"
+			},
+			"password": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "KeyVaultLinkedService",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": {
+					"value": "@{linkedService().secret_name}",
+					"type": "Expression"
+				}
+			}
+		},
+		"connectVia": {
+			"referenceName": "OnPrem",
+			"type": "IntegrationRuntimeReference"
+		}
+	}
+}

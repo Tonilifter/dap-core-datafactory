@@ -1,0 +1,32 @@
+{
+	"name": "trigger_ia_ref_ucm_esp_internal_apis",
+	"properties": {
+		"description": "Trigger que dispara la extracción e ingesta de los ficheros Assays del Sharepoint.",
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "InternalAPIAzureFunctionPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "IA_REF_UCM",
+					"region": "ESP",
+					"is_interval": false,
+					"package": "*",
+					"mock": "false"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2020-11-26T07:30:00Z",
+				"timeZone": "UTC"
+			}
+		}
+	}
+}

@@ -1,0 +1,255 @@
+{
+	"name": "DdgPythonPipeline",
+	"properties": {
+		"activities": [
+			{
+				"name": "GetMetadata",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "OperationaLogStart",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": {
+							"value": "SELECT * FROM dbo.dynamic_dataset_generator WHERE ddg_process = '@{pipeline().parameters.processId}'",
+							"type": "Expression"
+						},
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "AzureSqlDataset",
+						"type": "DatasetReference",
+						"parameters": {
+							"tableName": "dbo.dynamic_dataset_generator",
+							"secretName": "db-metadata-secret"
+						}
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "OperationaLogStart",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "OperationalLogPipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": false,
+					"parameters": {
+						"nivel": "INFO",
+						"modulo": "DDG_PIPELINE",
+						"pipelineName": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"logType": "START",
+						"dataDate": "",
+						"uid": {
+							"value": "@variables('uid')",
+							"type": "Expression"
+						},
+						"parentUid": {
+							"value": "@variables('parentUid')",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "OperationaLogErrorGetMetadata",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "GetMetadata",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "OperationalLogPipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"nivel": "ERROR",
+						"modulo": "DDG_PIPELINE",
+						"pipelineName": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"logType": "END",
+						"dataDate": "",
+						"message": {
+							"value": "@concat('GetMetadata: ', activity('GetMetadata').error.message)",
+							"type": "Expression"
+						},
+						"uid": {
+							"value": "@variables('uid')",
+							"type": "Expression"
+						},
+						"parentUid": {
+							"value": "@variables('parentUid')",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "CallDdg",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "GetMetadata",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('GetMetadata').output.value",
+						"type": "Expression"
+					},
+					"isSequential": true,
+					"activities": [
+						{
+							"name": "DdgPython",
+							"type": "DatabricksSparkPython",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pythonFile": {
+									"value": "@concat('dbfs:/',item().library_main_class)",
+									"type": "Expression"
+								},
+								"parameters": [
+									"-i",
+									"@pipeline().parameters.processId",
+									"-d",
+									"@variables('referenceDate')",
+									"-u",
+									"@variables('uid')",
+									"-p",
+									"@variables('parentUid')"
+								],
+								"libraries": {
+									"value": "@json(concat(concat('[{\"whl\": \"dbfs:/', item().library_path), '\"}]'))",
+									"type": "Expression"
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "AzureDatabricksDynamicLinkedServicePython",
+								"type": "LinkedServiceReference",
+								"parameters": {
+									"workers": {
+										"value": "@{if(empty(string(item().min_workers)),2,string(item().min_workers))}:@{if(empty(string(item().max_workers)),8,string(item().max_workers))}",
+										"type": "Expression"
+									},
+									"token": "dbcoar-databricks-token",
+									"clusterVersion": "6.4.x-esr-scala2.11"
+								}
+							}
+						},
+						{
+							"name": "OperationaLogErrorDDG",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "DdgPython",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "OperationalLogPipeline",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"nivel": "ERROR",
+									"modulo": "DDG_PIPELINE",
+									"logType": "END",
+									"message": {
+										"value": "@concat('DdgPython', activity('DdgPython').error.message)",
+										"type": "Expression"
+									},
+									"uid": {
+										"value": "@variables('uid')",
+										"type": "Expression"
+									},
+									"parentUid": {
+										"value": "@variables('parentUid')",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"processId": {
+				"type": "string"
+			},
+			"referenceDate": {
+				"type": "string"
+			},
+			"parentUid": {
+				"type": "array"
+			},
+			"frequency": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"uid": {
+				"type": "String",
+				"defaultValue": "@concat('DDG#',pipeline().parameters.processId,'#',if(empty(pipeline().parameters.referenceDate),utcnow('yyyy/MM/dd'),pipeline().parameters.referenceDate), '#' , utcnow('yyyyMMddHHmmssfff'))"
+			},
+			"parentUid": {
+				"type": "String",
+				"defaultValue": "@if(not(empty(pipeline().parameters.parentUid)),join(pipeline().parameters.parentUid,','),null)"
+			},
+			"referenceDate": {
+				"type": "String",
+				"defaultValue": "@if(empty(pipeline().parameters.referenceDate),utcnow('yyyy/MM/dd'),pipeline().parameters.referenceDate)"
+			}
+		},
+		"folder": {
+			"name": "use_cases"
+		},
+		"annotations": []
+	}
+}

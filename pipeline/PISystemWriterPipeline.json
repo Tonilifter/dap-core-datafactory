@@ -1,0 +1,624 @@
+{
+	"name": "PISystemWriterPipeline",
+	"properties": {
+		"activities": [
+			{
+				"name": "TranslateBaseURL",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "GetMetadataServer",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@concat('https://', replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), 'corekv', '.vault.azure.net/secrets/', activity('GetMetadataServer').output.value[0].webapi_baseurl_secret_name, '/?api-version=7.0')",
+						"type": "Expression"
+					},
+					"connectVia": {
+						"referenceName": "IntegrationRuntimeFreezer",
+						"type": "IntegrationRuntimeReference"
+					},
+					"method": "GET",
+					"authentication": {
+						"type": "MSI",
+						"resource": "https://vault.azure.net"
+					}
+				}
+			},
+			{
+				"name": "GetMetadataServer",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "OperationaLogStart",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": {
+							"value": "SELECT pssw.pi_server, pssw.api_user_secret_name, pssw.api_pass_secret_name, pss.webapi_baseurl_secret_name, pss.business_unit\nFROM pitagmanager.pi_system_writer_users pssw\nINNER JOIN pitagmanager.pi_system_servers pss \nON pssw.pi_server = pss.pi_server WHERE pssw.pi_server = '@{pipeline().parameters.server}' and pssw.api_user_secret_name = '@{pipeline().parameters.user}' ",
+							"type": "Expression"
+						},
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "AzureSqlDataset",
+						"type": "DatasetReference",
+						"parameters": {
+							"tableName": "pitagmanager.pi_system_servers",
+							"secretName": "db-metadata-secret"
+						}
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "GetMetadataTag",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": {
+							"value": "SELECT webid FROM pitagmanager.pi_system_tags_raw WHERE \nname = '@{pipeline().parameters.tagName}' and pi_server = '@{pipeline().parameters.server}'  and write = 1",
+							"type": "Expression"
+						},
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "AzureSqlDataset",
+						"type": "DatasetReference",
+						"parameters": {
+							"tableName": "pitagmanager.pi_system_tags_raw",
+							"secretName": "db-metadata-secret"
+						}
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "TranslateUSER",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "GetMetadataServer",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@concat('https://', replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), 'corekv', '.vault.azure.net/secrets/', activity('GetMetadataServer').output.value[0].api_user_secret_name, '/?api-version=7.0')",
+						"type": "Expression"
+					},
+					"connectVia": {
+						"referenceName": "IntegrationRuntimeFreezer",
+						"type": "IntegrationRuntimeReference"
+					},
+					"method": "GET",
+					"authentication": {
+						"type": "MSI",
+						"resource": "https://vault.azure.net"
+					}
+				}
+			},
+			{
+				"name": "OperationaLogStart",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "OperationalLogPipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": false,
+					"parameters": {
+						"nivel": "INFO",
+						"modulo": "PI_WRITTER",
+						"pipelineName": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"logType": "START",
+						"applicationName": {
+							"value": "@variables('applicationName')",
+							"type": "Expression"
+						},
+						"dataDate": {
+							"value": "@formatDateTime(utcnow(),'yyyy/MM/dd')",
+							"type": "Expression"
+						},
+						"region": {
+							"value": "@variables('region')",
+							"type": "Expression"
+						},
+						"message": {
+							"value": "@pipeline().parameters.Json",
+							"type": "Expression"
+						},
+						"sourceType": {
+							"value": "@variables('extractionTool')",
+							"type": "Expression"
+						},
+						"uid": {
+							"value": "@variables('uid')",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "Set Url",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "TranslateBaseURL",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "GetMetadataTag",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "url",
+					"value": {
+						"value": "@concat(activity('TranslateBaseURL').output.value, '/streams/', activity('GetMetadataTag').output.value[0].webid, '/recorded')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set userName",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "TranslateUSER",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "userName",
+					"value": {
+						"value": "@activity('TranslateUser').output.value",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set secretName",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "GetMetadataServer",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "secretName",
+					"value": {
+						"value": "@activity('GetMetadataServer').output.value[0].api_pass_secret_name",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "If ProductionEnv",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Set secretName",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Set Url",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Set userName",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@or(equals(replace(replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''),'daplatform0101',''),'p'), equals(pipeline().parameters.forceCopy,'True'))",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "OperationaLogEndNoCopy",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "OperationalLogPipeline",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": false,
+								"parameters": {
+									"nivel": "INFO",
+									"modulo": "PI_WRITTER",
+									"pipelineName": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"logType": "END",
+									"applicationName": {
+										"value": "@variables('applicationName')",
+										"type": "Expression"
+									},
+									"dataDate": {
+										"value": "@formatDateTime(utcnow(),'yyyy/MM/dd')",
+										"type": "Expression"
+									},
+									"datasetName": {
+										"value": "@pipeline().parameters.forceCopy",
+										"type": "Expression"
+									},
+									"region": {
+										"value": "@variables('region')",
+										"type": "Expression"
+									},
+									"message": {
+										"value": "@pipeline().parameters.Json",
+										"type": "Expression"
+									},
+									"sourceType": {
+										"value": "@variables('extractionTool')",
+										"type": "Expression"
+									},
+									"uid": {
+										"value": "@variables('uid')",
+										"type": "Expression"
+									},
+									"datasetIn": {
+										"value": "@variables('datasetIn')",
+										"type": "Expression"
+									},
+									"datasetOut": {
+										"value": "@variables('datasetOut')",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "WriteToPI",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "BinarySource",
+									"storeSettings": {
+										"type": "HttpReadSettings",
+										"requestMethod": "POST",
+										"additionalHeaders": "X-Requested-With: XMLHttpRequest\nContent-Type: application/json",
+										"requestBody": {
+											"value": "@{pipeline().parameters.Json}",
+											"type": "Expression"
+										},
+										"requestTimeout": ""
+									},
+									"formatSettings": {
+										"type": "BinaryReadSettings"
+									}
+								},
+								"sink": {
+									"type": "BinarySink",
+									"storeSettings": {
+										"type": "AzureBlobStorageWriteSettings"
+									}
+								},
+								"enableStaging": false
+							},
+							"inputs": [
+								{
+									"referenceName": "InternalApiDataSetNoSSL",
+									"type": "DatasetReference",
+									"parameters": {
+										"url": {
+											"value": "@variables('url')",
+											"type": "Expression"
+										},
+										"username": {
+											"value": "@replace(variables('userName'),'\\\\','\\')",
+											"type": "Expression"
+										},
+										"secret_name": {
+											"value": "@variables('secretName')",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "BlobStorageBinaryLandingDataset",
+									"type": "DatasetReference",
+									"parameters": {
+										"businessUnit": {
+											"value": "@activity('GetMetadataServer').output.value[0].business_unit",
+											"type": "Expression"
+										},
+										"landingType": "sl",
+										"extractionTool": {
+											"value": "@variables('extractionTool')",
+											"type": "Expression"
+										},
+										"applicationName": {
+											"value": "@variables('applicationName')",
+											"type": "Expression"
+										},
+										"region": {
+											"value": "@variables('region')",
+											"type": "Expression"
+										},
+										"datasetName": {
+											"value": "@variables('datasetName')",
+											"type": "Expression"
+										},
+										"date": "date",
+										"format": "json"
+									}
+								}
+							]
+						},
+						{
+							"name": "OperationaLogEnd",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "WriteToPI",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "OperationalLogPipeline",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": false,
+								"parameters": {
+									"nivel": "INFO",
+									"modulo": "PI_WRITTER",
+									"pipelineName": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"logType": "END",
+									"applicationName": {
+										"value": "@variables('applicationName')",
+										"type": "Expression"
+									},
+									"dataDate": {
+										"value": "@formatDateTime(utcnow(),'yyyy/MM/dd')",
+										"type": "Expression"
+									},
+									"region": {
+										"value": "@variables('region')",
+										"type": "Expression"
+									},
+									"message": {
+										"value": "@string(pipeline().parameters.Json)",
+										"type": "Expression"
+									},
+									"sourceType": {
+										"value": "@variables('extractionTool')",
+										"type": "Expression"
+									},
+									"uid": {
+										"value": "@variables('uid')",
+										"type": "Expression"
+									},
+									"datasetIn": {
+										"value": "@variables('datasetIn')",
+										"type": "Expression"
+									},
+									"datasetOut": {
+										"value": "@variables('datasetOut')",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "OperationaLogErrorWriteToPI",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "WriteToPI",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "OperationalLogPipeline",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"nivel": "ERROR",
+									"modulo": "PI_WRITTER",
+									"pipelineName": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"logType": "END",
+									"applicationName": {
+										"value": "@variables('applicationName')",
+										"type": "Expression"
+									},
+									"dataDate": {
+										"value": "@formatDateTime(utcnow(),'yyyy/MM/dd')",
+										"type": "Expression"
+									},
+									"region": {
+										"value": "@variables('region')",
+										"type": "Expression"
+									},
+									"message": {
+										"value": "@concat('WriteToPI: ', activity('WriteToPI').error.message)",
+										"type": "Expression"
+									},
+									"sourceType": {
+										"value": "@variables('extractionTool')",
+										"type": "Expression"
+									},
+									"uid": {
+										"value": "@variables('uid')",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"Json": {
+				"type": "object",
+				"defaultValue": [
+					{
+						"Timestamp": "2020-06-03T00:00:00Z",
+						"UnitsAbbreviation": "m",
+						"Good": true,
+						"Questionable": false,
+						"Value": 100
+					}
+				]
+			},
+			"server": {
+				"type": "string"
+			},
+			"tagName": {
+				"type": "string"
+			},
+			"forceCopy": {
+				"type": "string",
+				"defaultValue": "False"
+			},
+			"user": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"extractionTool": {
+				"type": "String",
+				"defaultValue": "apis"
+			},
+			"applicationName": {
+				"type": "String",
+				"defaultValue": "AP_REF_PI"
+			},
+			"region": {
+				"type": "String",
+				"defaultValue": "ESP"
+			},
+			"datasetName": {
+				"type": "String",
+				"defaultValue": "pi_writter_metadata"
+			},
+			"uid": {
+				"type": "String",
+				"defaultValue": "@concat('PI_WRITER#$AP_REF_PI$_ESP_', pipeline().parameters.server, '_', pipeline().parameters.tagName, '#', utcnow('yyyy/MM/dd'), '#', utcnow('yyyyMMddHHmmssfff'))"
+			},
+			"datasetIn": {
+				"type": "Array"
+			},
+			"datasetOut": {
+				"type": "Array"
+			},
+			"url": {
+				"type": "String"
+			},
+			"userName": {
+				"type": "String"
+			},
+			"secretName": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "pi_writter"
+		},
+		"annotations": []
+	}
+}

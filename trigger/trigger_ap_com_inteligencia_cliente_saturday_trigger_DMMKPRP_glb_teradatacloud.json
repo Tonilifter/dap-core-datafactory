@@ -1,0 +1,43 @@
+{
+	"name": "trigger_ap_com_inteligencia_cliente_saturday_trigger_DMMKPRP_glb_teradatacloud",
+	"properties": {
+		"description": "extracion mediante los metadatos de catalogo",
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "TeradataCloudPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "AP_COM_INTELIGENCIA_CLIENTE",
+					"region": "GLB",
+					"is_interval": true,
+					"mock": "false",
+					"package": "saturday_trigger_DMMKPRP"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Week",
+				"interval": 1,
+				"startTime": "2021-11-15T02:00:00Z",
+				"timeZone": "UTC",
+				"schedule": {
+					"minutes": [
+						0
+					],
+					"hours": [
+						2
+					],
+					"weekDays": [
+						"Saturday"
+					]
+				}
+			}
+		}
+	}
+}

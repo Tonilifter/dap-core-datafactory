@@ -1,0 +1,43 @@
+{
+	"name": "trigger_ea_signal_glb_external_api_htl",
+	"properties": {
+		"description": "Lanza proceso signal htl",
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "ExternalAPIAzureFunctionPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "EA_SIGNAL",
+					"region": "GLB",
+					"is_interval": false,
+					"sourceType": "external_api",
+					"package": "SIGNAL_FAR_APIS_HTL",
+					"mock": "false",
+					"is_durable": false,
+					"referenceDate": "@formatDateTime(convertFromUtc(trigger().startTime, 'Romance Standard Time'),'yyyy/MM/dd')"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2021-11-29T16:26:00",
+				"timeZone": "Romance Standard Time",
+				"schedule": {
+					"minutes": [
+						30
+					],
+					"hours": [
+						13
+					]
+				}
+			}
+		}
+	}
+}

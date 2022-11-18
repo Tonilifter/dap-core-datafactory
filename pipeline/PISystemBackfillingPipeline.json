@@ -1,0 +1,957 @@
+{
+	"name": "PISystemBackfillingPipeline",
+	"properties": {
+		"activities": [
+			{
+				"name": "HttpToken",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "Set appSecretToken",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Set appIdToken",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": true,
+					"secureInput": true
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": "https://login.microsoftonline.com/0a25214f-ee52-483c-b96b-dc79f3227a6f/oauth2/v2.0/token",
+					"method": "POST",
+					"headers": {
+						"Content-Type": "application/x-www-form-urlencoded"
+					},
+					"body": {
+						"value": "@concat('client_id=', variables('appIdToken'), '&client_secret=',  encodeUriComponent(variables('appSecretToken')), '&grant_type=client_credentials&scope=https://graph.microsoft.com/.default')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set appIdToken",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "GetAppIdToken",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "appIdToken",
+					"value": {
+						"value": "@activity('GetAppIdToken').output.value",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "GetAppIdToken",
+				"type": "WebActivity",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": true,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@concat('https://', replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), 'corekv.vault.azure.net/secrets/adapp-extract-id?api-version=7.0')",
+						"type": "Expression"
+					},
+					"connectVia": {
+						"referenceName": "IntegrationRuntimeFreezer",
+						"type": "IntegrationRuntimeReference"
+					},
+					"method": "GET",
+					"authentication": {
+						"type": "MSI",
+						"resource": "https://vault.azure.net"
+					}
+				}
+			},
+			{
+				"name": "GetAppSecretToken",
+				"type": "WebActivity",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": true,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@concat('https://', replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), 'corekv.vault.azure.net/secrets/adsp-extract-secret?api-version=7.0')",
+						"type": "Expression"
+					},
+					"connectVia": {
+						"referenceName": "IntegrationRuntimeFreezer",
+						"type": "IntegrationRuntimeReference"
+					},
+					"method": "GET",
+					"authentication": {
+						"type": "MSI",
+						"resource": "https://vault.azure.net"
+					}
+				}
+			},
+			{
+				"name": "Set appSecretToken",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "GetAppSecretToken",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "appSecretToken",
+					"value": {
+						"value": "@activity('GetAppSecretToken').output.value",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set httpToken",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "HttpToken",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "httpToken",
+					"value": {
+						"value": "@activity('HttpToken').output.access_token",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "If RequestExists",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Get NumberRequest",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@greater(string(activity('Get NumberRequest').output.firstRow.numberOfRequest),'0')",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "NoRequest",
+							"type": "Wait",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"waitTimeInSeconds": 1
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "PISystemCommonPipeline",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "BuildEnqueueBatch",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "PISystemCommonPipeline",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"applicationName": {
+										"value": "@activity('GetMetadata').output.value[0].app_name",
+										"type": "Expression"
+									},
+									"region": {
+										"value": "@activity('GetMetadata').output.value[0].region",
+										"type": "Expression"
+									},
+									"piServer": {
+										"value": "@activity('BuildEnqueueBatch').output.piServer",
+										"type": "Expression"
+									},
+									"startTime": {
+										"value": "@activity('BuildEnqueueBatch').output.startTime",
+										"type": "Expression"
+									},
+									"endTime": {
+										"value": "@activity('BuildEnqueueBatch').output.endTime",
+										"type": "Expression"
+									},
+									"mode": {
+										"value": "@variables('mode')",
+										"type": "Expression"
+									},
+									"interval": {
+										"value": "@activity('BuildEnqueueBatch').output.interval",
+										"type": "Expression"
+									},
+									"inputJSON": {
+										"value": "@activity('BuildEnqueueBatch').output",
+										"type": "Expression"
+									},
+									"historicalExecution": true
+								}
+							}
+						},
+						{
+							"name": "BuildEnqueueBatch",
+							"type": "WebActivity",
+							"dependsOn": [
+								{
+									"activity": "OperationaLogStart",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": true
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"url": {
+									"value": "@concat('https://coreutils', replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), 'akcore.cloudapp.repsol.com/dap-core-extraction-utils/pisystemenqueue')",
+									"type": "Expression"
+								},
+								"method": "GET",
+								"headers": {
+									"Content-Type": "text/plain",
+									"X-Extraction-Tool": {
+										"value": "@variables('extractionTool')",
+										"type": "Expression"
+									},
+									"X-Region": {
+										"value": "@activity('GetMetadata').output.value[0].region",
+										"type": "Expression"
+									},
+									"X-Mode": {
+										"value": "@variables('mode')",
+										"type": "Expression"
+									},
+									"X-Enqueue-Id": {
+										"value": "@variables('enqueueId')",
+										"type": "Expression"
+									},
+									"Authorization": {
+										"value": "@concat('Bearer ', variables('httpToken'))",
+										"type": "Expression"
+									},
+									"X-Application-Name": {
+										"value": "@activity('GetMetadata').output.value[0].app_name",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "GetMetadata",
+							"type": "Lookup",
+							"dependsOn": [
+								{
+									"activity": "Set RequestRunning",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "AzureSqlSource",
+									"sqlReaderQuery": {
+										"value": "SELECT pss.app_name, pss.region\nFROM pitagmanager.pi_system_servers pss\n     JOIN pitagmanager.pi_system_enqueues pse\n       ON (pss.pi_server = pse.pi_server )\nWHERE pse.id = '@{variables('enqueueId')}'\n",
+										"type": "Expression"
+									},
+									"partitionOption": "None"
+								},
+								"dataset": {
+									"referenceName": "AzureSqlDataset",
+									"type": "DatasetReference",
+									"parameters": {
+										"tableName": "pitagmanager.pi_system_servers",
+										"secretName": "db-metadata-secret"
+									}
+								},
+								"firstRowOnly": false
+							}
+						},
+						{
+							"name": "Set RequestRunning",
+							"type": "Lookup",
+							"dependsOn": [
+								{
+									"activity": "Set enqueueId",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								},
+								{
+									"activity": "Set requestId",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								},
+								{
+									"activity": "Set mode",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "AzureSqlSource",
+									"sqlReaderQuery": {
+										"value": "UPDATE  pitagmanager.pi_system_enqueues\nSET status = 2\nOUTPUT INSERTED.*\nWHERE id = @{variables('enqueueId')}",
+										"type": "Expression"
+									},
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"dataset": {
+									"referenceName": "AzureSqlDataset",
+									"type": "DatasetReference",
+									"parameters": {
+										"tableName": "pitagmanager.pi_system_enqueues",
+										"secretName": "db-metadata-secret"
+									}
+								}
+							}
+						},
+						{
+							"name": "Set RequestOK",
+							"type": "Lookup",
+							"dependsOn": [
+								{
+									"activity": "PISystemCommonPipeline",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "AzureSqlSource",
+									"sqlReaderQuery": {
+										"value": "UPDATE  pitagmanager.pi_system_enqueues\nSET status = 1\nOUTPUT INSERTED.*\nWHERE id = @{variables('enqueueId')}",
+										"type": "Expression"
+									},
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"dataset": {
+									"referenceName": "AzureSqlDataset",
+									"type": "DatasetReference",
+									"parameters": {
+										"tableName": "pitagmanager.pi_system_enqueues",
+										"secretName": "db-metadata-secret"
+									}
+								}
+							}
+						},
+						{
+							"name": "Set RequestKO",
+							"type": "Lookup",
+							"dependsOn": [
+								{
+									"activity": "PISystemCommonPipeline",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "AzureSqlSource",
+									"sqlReaderQuery": {
+										"value": "UPDATE  pitagmanager.pi_system_enqueues\nSET status = 3\nOUTPUT INSERTED.*\nWHERE id = @{variables('enqueueId')}",
+										"type": "Expression"
+									},
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"dataset": {
+									"referenceName": "AzureSqlDataset",
+									"type": "DatasetReference",
+									"parameters": {
+										"tableName": "pitagmanager.pi_system_enqueues",
+										"secretName": "db-metadata-secret"
+									}
+								}
+							}
+						},
+						{
+							"name": "Set mode",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "Get EnqueueId",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "mode",
+								"value": {
+									"value": "@string(activity('Get EnqueueId').output.firstRow.mode)",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Set enqueueId",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "Get EnqueueId",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "enqueueId",
+								"value": {
+									"value": "@string(activity('Get EnqueueId').output.firstRow.id)",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Set requestId",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "Get EnqueueId",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "requestId",
+								"value": {
+									"value": "@string(activity('Get EnqueueId').output.firstRow.request_id)",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Same RequestId",
+							"type": "Lookup",
+							"dependsOn": [
+								{
+									"activity": "Set RequestOK",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "AzureSqlSource",
+									"sqlReaderQuery": {
+										"value": "SELECT COUNT(*) as numPendingRequest\nFROM pitagmanager.pi_system_enqueues pse\nWHERE request_id = '@{variables('requestId')}' and status = 0",
+										"type": "Expression"
+									},
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"dataset": {
+									"referenceName": "AzureSqlDataset",
+									"type": "DatasetReference",
+									"parameters": {
+										"tableName": "pitagmanager.pi_system_enqueues",
+										"secretName": "db-metadata-secret"
+									}
+								}
+							}
+						},
+						{
+							"name": "Get EnqueueId",
+							"type": "Lookup",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "AzureSqlSource",
+									"sqlReaderQuery": {
+										"value": "SELECT id, mode, request_id \nFROM pitagmanager.pi_system_enqueues pse\nWHERE id = (\n\tSELECT min(id)\n\tFROM pitagmanager.pi_system_enqueues pse \n\tWHERE status = 0 and pi_server = '@{pipeline().parameters.pi_server}')",
+										"type": "Expression"
+									},
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"dataset": {
+									"referenceName": "AzureSqlDataset",
+									"type": "DatasetReference",
+									"parameters": {
+										"tableName": "pitagmanager.pi_system_enqueues",
+										"secretName": "db-metadata-secret"
+									}
+								}
+							}
+						},
+						{
+							"name": "NoMoreRequestId",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "Same RequestId",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "flag",
+								"value": {
+									"value": "@if(equals(activity('Same RequestId').output.firstRow.numPendingRequest,0), true,false)",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Same RequestId_caseFailure",
+							"type": "Lookup",
+							"dependsOn": [
+								{
+									"activity": "Set RequestKO",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "AzureSqlSource",
+									"sqlReaderQuery": {
+										"value": "SELECT COUNT(*) as numPendingRequest\nFROM pitagmanager.pi_system_enqueues pse\nWHERE request_id = '@{variables('requestId')}' and status = 0",
+										"type": "Expression"
+									},
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"dataset": {
+									"referenceName": "AzureSqlDataset",
+									"type": "DatasetReference",
+									"parameters": {
+										"tableName": "pitagmanager.pi_system_enqueues",
+										"secretName": "db-metadata-secret"
+									}
+								}
+							}
+						},
+						{
+							"name": "NoMoreRequestId_caseFailure",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "Same RequestId_caseFailure",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "flag",
+								"value": {
+									"value": "@if(equals(activity('Same RequestId_caseFailure').output.firstRow.numPendingRequest,0), true,false)",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "OperationaLogStart",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "Set uid",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "OperationalLogPipeline",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": false,
+								"parameters": {
+									"nivel": "INFO",
+									"modulo": {
+										"value": "@concat('REQUEST_PI_',toUpper(variables('mode')))",
+										"type": "Expression"
+									},
+									"pipelineName": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"logType": "START",
+									"applicationName": {
+										"value": "@activity('GetMetadata').output.value[0].app_name",
+										"type": "Expression"
+									},
+									"dataDate": {
+										"value": "@formatDateTime(utcnow(),'yyyy/MM/dd')",
+										"type": "Expression"
+									},
+									"region": {
+										"value": "@activity('GetMetadata').output.value[0].region",
+										"type": "Expression"
+									},
+									"sourceType": {
+										"value": "@variables('extractionTool')",
+										"type": "Expression"
+									},
+									"uid": {
+										"value": "@variables('uid')",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "Set uid",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "GetMetadata",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "uid",
+								"value": {
+									"value": "@concat('REQUEST_PI#$', activity('GetMetadata').output.value[0].app_name, '$_', activity('GetMetadata').output.value[0].region, '#', formatDateTime(utcnow(),'yyyy/MM/dd') , '#', utcnow('yyyyMMddHHmmssfff'))",
+									"type": "Expression"
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Get NumberRequest",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "Set httpToken",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": {
+							"value": "SELECT COUNT(*) as numberOfRequest FROM pitagmanager.pi_system_enqueues pse \nWHERE status = 0 and pi_server = '@{pipeline().parameters.pi_server}'",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "AzureSqlDataset",
+						"type": "DatasetReference",
+						"parameters": {
+							"tableName": "pitagmanager.pi_system_enqueues",
+							"secretName": "db-metadata-secret"
+						}
+					}
+				}
+			},
+			{
+				"name": "If NoMoreRequestId",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "If RequestExists",
+						"dependencyConditions": [
+							"Succeeded",
+							"Failed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@variables('flag')",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "NoActionRequired",
+							"type": "Wait",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"waitTimeInSeconds": 1
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "OperationaLogEnd",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "Get Failed Request",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "OperationalLogPipeline",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": false,
+								"parameters": {
+									"nivel": {
+										"value": "@if(equals(activity('Get Failed Request').output.firstRow.numFailedRequest, 0), 'INFO', 'ERROR')",
+										"type": "Expression"
+									},
+									"modulo": {
+										"value": "@concat('REQUEST_PI_',toUpper(variables('mode')))",
+										"type": "Expression"
+									},
+									"pipelineName": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"logType": "END",
+									"applicationName": {
+										"value": "@activity('GetMetadata').output.value[0].app_name",
+										"type": "Expression"
+									},
+									"dataDate": {
+										"value": "@formatDateTime(utcnow(),'yyyy/MM/dd')",
+										"type": "Expression"
+									},
+									"datasetName": "",
+									"region": {
+										"value": "@activity('GetMetadata').output.value[0].region",
+										"type": "Expression"
+									},
+									"message": {
+										"value": "@if(equals(activity('Get Failed Request').output.firstRow.numFailedRequest, 0), variables('requestId'), concat('Some execution failed with requestId: ', variables('requestId')))",
+										"type": "Expression"
+									},
+									"sourceType": {
+										"value": "@variables('extractionTool')",
+										"type": "Expression"
+									},
+									"uid": {
+										"value": "@variables('uid')",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "Get Failed Request",
+							"type": "Lookup",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "AzureSqlSource",
+									"sqlReaderQuery": {
+										"value": "SELECT COUNT(*) as numFailedRequest FROM pitagmanager.pi_system_enqueues pse WHERE request_id = '@{variables('requestId')}' and status = 3",
+										"type": "Expression"
+									},
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"dataset": {
+									"referenceName": "AzureSqlDataset",
+									"type": "DatasetReference",
+									"parameters": {
+										"tableName": "pitagmanager.pi_system_enqueues",
+										"secretName": "db-metadata-secret"
+									}
+								}
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"pi_server": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"extractionTool": {
+				"type": "String",
+				"defaultValue": "apis"
+			},
+			"appIdToken": {
+				"type": "String"
+			},
+			"appSecretToken": {
+				"type": "String"
+			},
+			"httpToken": {
+				"type": "String"
+			},
+			"enqueueId": {
+				"type": "String"
+			},
+			"requestId": {
+				"type": "String"
+			},
+			"mode": {
+				"type": "String"
+			},
+			"flag": {
+				"type": "Boolean"
+			},
+			"proof": {
+				"type": "String"
+			},
+			"uid": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "extraction/pi"
+		},
+		"annotations": []
+	}
+}

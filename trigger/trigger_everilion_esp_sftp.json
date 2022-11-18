@@ -1,0 +1,39 @@
+{
+	"name": "trigger_everilion_esp_sftp",
+	"properties": {
+		"description": "Daily Everilion ETL",
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "FilesPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "everilion",
+					"region": "ESP",
+					"package": "*",
+					"mock": "false"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2019-06-19T04:00:00",
+				"timeZone": "Romance Standard Time",
+				"schedule": {
+					"minutes": [
+						30
+					],
+					"hours": [
+						3
+					]
+				}
+			}
+		}
+	}
+}

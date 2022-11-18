@@ -1,0 +1,48 @@
+{
+	"name": "trigger_ap_ref_sistema_integrado_produccion_logistica_esp_oracle_pol",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "OraclePipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "AP_REF_SISTEMA_INTEGRADO_PRODUCCION_LOGISTICA",
+					"region": "ESP",
+					"is_interval": false,
+					"sourceType": "db",
+					"mock": "false",
+					"package": "SISTEMA INTEGRADO PRODUCCION LOGISTICA"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2021-04-30T06:00:00Z",
+				"timeZone": "UTC",
+				"schedule": {
+					"minutes": [
+						40
+					],
+					"hours": [
+						6,
+						8,
+						10,
+						12,
+						14,
+						16,
+						18,
+						20,
+						4
+					]
+				}
+			}
+		}
+	}
+}

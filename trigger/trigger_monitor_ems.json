@@ -1,0 +1,37 @@
+{
+	"name": "trigger_monitor_ems",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "MonitorPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"monitorId": "PR_EMS",
+					"laQuery": "adfOperationLogs('powercurve', 'IngestionFileReceiverPipeline', '', 'staging/external/IA_COM_EMS/ESP/powercurve', '')\n| union adfOperationLogs('ems-vivit-ddg', 'DdgPipeline', '', 'ems-vivit-ddg', '')\n| extend Today=iif(ReferenceDate == '#referenceDate#' or isempty(ReferenceDate), true, false)\n| extend Status = iif(Name == 'powercurve' and not(Today), strcat(Status, ' - Yesterday'), Status)\n| invoke SummarizeADF()\n| invoke MonitorSummarize()",
+					"timespan": "PT21H15M"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2022-01-03T12:14:00",
+				"timeZone": "Romance Standard Time",
+				"schedule": {
+					"minutes": [
+						0
+					],
+					"hours": [
+						14
+					]
+				}
+			}
+		}
+	}
+}

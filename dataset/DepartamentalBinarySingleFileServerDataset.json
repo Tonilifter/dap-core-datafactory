@@ -1,0 +1,46 @@
+{
+	"name": "DepartamentalBinarySingleFileServerDataset",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "DepartamentalServerLinkedService",
+			"type": "LinkedServiceReference",
+			"parameters": {
+				"host": "@dataset().host",
+				"userid": "@dataset().userid",
+				"secret_name": "@dataset().secret_name"
+			}
+		},
+		"parameters": {
+			"folder": {
+				"type": "string"
+			},
+			"host": {
+				"type": "string"
+			},
+			"userid": {
+				"type": "string"
+			},
+			"secret_name": {
+				"type": "string"
+			},
+			"filename": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "extraction/files"
+		},
+		"annotations": [],
+		"type": "Binary",
+		"typeProperties": {
+			"location": {
+				"type": "FileServerLocation",
+				"fileName": "@dataset().filename",
+				"folderPath": {
+					"value": "@dataset().folder",
+					"type": "Expression"
+				}
+			}
+		}
+	}
+}

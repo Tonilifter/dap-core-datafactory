@@ -1,0 +1,43 @@
+{
+	"name": "trigger_hedging_glb_mllab_delta_ddg_dwh",
+	"properties": {
+		"description": "Trigger for the output of the Delta model in Hedging",
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "DdgPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"processId": "$AM_EYG_HEDGING_X$_delta-ddg-dwh"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Week",
+				"interval": 1,
+				"startTime": "2021-11-17T11:00:00",
+				"timeZone": "Romance Standard Time",
+				"schedule": {
+					"minutes": [
+						0
+					],
+					"hours": [
+						11
+					],
+					"weekDays": [
+						"Monday",
+						"Tuesday",
+						"Wednesday",
+						"Thursday",
+						"Friday"
+					]
+				}
+			}
+		}
+	}
+}

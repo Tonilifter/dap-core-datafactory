@@ -1,0 +1,32 @@
+{
+	"name": "trigger_ap_ref_pi_per_sslimlppi01_fillgaps_raw",
+	"properties": {
+		"description": "Trigger 5m brutos Pampilla rellenado de huecos",
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "PISystemFillGapsPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "AP_REF_PI",
+					"region": "PER",
+					"piServer": "SSLIMLPPI01",
+					"mode": "raw",
+					"interval": "5m"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Minute",
+				"interval": 25,
+				"startTime": "2021-07-20T11:28:00",
+				"timeZone": "Romance Standard Time"
+			}
+		}
+	}
+}

@@ -1,0 +1,32 @@
+{
+	"name": "trigger_ap_ref_pi_esp_ssbio05pi01_fillgaps_raw_1h",
+	"properties": {
+		"description": "Trigger rellenado huecos brutos horarios Bilbao",
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "PISystemFillGapsPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "AP_REF_PI",
+					"region": "ESP",
+					"piServer": "SSBIO05PI01",
+					"mode": "raw",
+					"interval": "1h"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Hour",
+				"interval": 4,
+				"startTime": "2020-11-25T18:57:00",
+				"timeZone": "Romance Standard Time"
+			}
+		}
+	}
+}

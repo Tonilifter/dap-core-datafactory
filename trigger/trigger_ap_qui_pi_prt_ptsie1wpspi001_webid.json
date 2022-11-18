@@ -1,0 +1,30 @@
+{
+	"name": "trigger_ap_qui_pi_prt_ptsie1wpspi001_webid",
+	"properties": {
+		"description": "Sines-PTSIE1WPSPI001",
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "PISystemGetWebIDPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "AP_QUI_PI",
+					"region": "PRT",
+					"piServer": "PTSIE1WPSPI001"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Hour",
+				"interval": 1,
+				"startTime": "2021-07-20T07:43:00",
+				"timeZone": "Romance Standard Time"
+			}
+		}
+	}
+}

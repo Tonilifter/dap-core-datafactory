@@ -1,0 +1,30 @@
+{
+	"name": "trigger_ap_ref_pi_esp_sslcg04pi10_streaming",
+	"properties": {
+		"description": "Trigger horario streaming Coruña",
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "PISystemStreamingPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "AP_REF_PI",
+					"region": "ESP",
+					"piServer": "SSLCG04PI10"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Hour",
+				"interval": 1,
+				"startTime": "2020-07-30T16:20:00",
+				"timeZone": "Romance Standard Time"
+			}
+		}
+	}
+}

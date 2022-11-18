@@ -1,0 +1,32 @@
+{
+	"name": "OracleDataset",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "OracleLinkedService",
+			"type": "LinkedServiceReference",
+			"parameters": {
+				"secretName": "@dataset().secretName"
+			}
+		},
+		"parameters": {
+			"tableName": {
+				"type": "String"
+			},
+			"secretName": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "extraction/databases"
+		},
+		"annotations": [],
+		"type": "OracleTable",
+		"typeProperties": {
+			"tableName": {
+				"value": "@dataset().tableName",
+				"type": "Expression"
+			}
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

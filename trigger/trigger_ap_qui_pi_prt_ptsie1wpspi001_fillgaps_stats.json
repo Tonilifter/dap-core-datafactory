@@ -1,0 +1,40 @@
+{
+	"name": "trigger_ap_qui_pi_prt_ptsie1wpspi001_fillgaps_stats",
+	"properties": {
+		"description": "Trigger diario estadisticos Sines rellenado de huecos",
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "PISystemFillGapsPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "AP_QUI_PI",
+					"region": "PRT",
+					"piServer": "PTSIE1WPSPI001",
+					"mode": "stats",
+					"interval": "1d"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2021-07-20T07:19:00",
+				"timeZone": "Romance Standard Time",
+				"schedule": {
+					"minutes": [
+						30
+					],
+					"hours": [
+						14
+					]
+				}
+			}
+		}
+	}
+}

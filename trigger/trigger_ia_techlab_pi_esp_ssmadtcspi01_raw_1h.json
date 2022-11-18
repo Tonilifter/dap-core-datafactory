@@ -1,0 +1,66 @@
+{
+	"name": "trigger_ia_techlab_pi_esp_ssmadtcspi01_raw_1h",
+	"properties": {
+		"description": "Trigger horario brutos techlab tag especiales 1h",
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "PISystemProcessPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "IA_TECHLAB_PI",
+					"region": "ESP",
+					"piServer": "SSMADTCSPI01",
+					"startTime": "h-1h",
+					"endTime": "h",
+					"mode": "raw",
+					"interval": "1h",
+					"historicalExecution": false
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2021-11-19T10:06:00",
+				"timeZone": "Romance Standard Time",
+				"schedule": {
+					"minutes": [
+						30
+					],
+					"hours": [
+						0,
+						1,
+						2,
+						3,
+						4,
+						5,
+						6,
+						7,
+						8,
+						9,
+						10,
+						11,
+						12,
+						13,
+						14,
+						15,
+						16,
+						17,
+						18,
+						19,
+						20,
+						21,
+						22,
+						23
+					]
+				}
+			}
+		}
+	}
+}

@@ -1,0 +1,652 @@
+{
+	"name": "PISystemGetWebIDPipeline",
+	"properties": {
+		"activities": [
+			{
+				"name": "ForEach",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "BuildWebIDRequest",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "GetMetadata",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "OperationaLogStart",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('BuildWebIDRequest').output.batchBodyPathList",
+						"type": "Expression"
+					},
+					"isSequential": true,
+					"activities": [
+						{
+							"name": "WebIDRequest",
+							"type": "Copy",
+							"dependsOn": [
+								{
+									"activity": "GetBatchBody",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "BinarySource",
+									"storeSettings": {
+										"type": "HttpReadSettings",
+										"requestMethod": "POST",
+										"additionalHeaders": "Content-Type: application/json\nX-Requested-With: XMLHttpRequest",
+										"requestBody": {
+											"value": "@{activity('GetBatchBody').output.batchBody}",
+											"type": "Expression"
+										},
+										"requestTimeout": ""
+									},
+									"formatSettings": {
+										"type": "BinaryReadSettings"
+									}
+								},
+								"sink": {
+									"type": "BinarySink",
+									"storeSettings": {
+										"type": "AzureBlobStorageWriteSettings"
+									}
+								},
+								"enableStaging": false
+							},
+							"inputs": [
+								{
+									"referenceName": "InternalApiDataSetNoSSL",
+									"type": "DatasetReference",
+									"parameters": {
+										"url": {
+											"value": "@concat(activity('BuildWebIDRequest').output.webAPIBaseURL, '/batch')",
+											"type": "Expression"
+										},
+										"username": {
+											"value": "@{replace(activity('BuildWebIDRequest').output.apiUser,'\\\\','\\')}",
+											"type": "Expression"
+										},
+										"secret_name": {
+											"value": "@{activity('BuildWebIDRequest').output.apiSecretName}",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "BlobStorageBinaryLandingDataset",
+									"type": "DatasetReference",
+									"parameters": {
+										"businessUnit": {
+											"value": "@activity('GetMetadata').output.value[0].business_unit",
+											"type": "Expression"
+										},
+										"landingType": "sl",
+										"extractionTool": {
+											"value": "@variables('extractionTool')",
+											"type": "Expression"
+										},
+										"applicationName": {
+											"value": "@pipeline().parameters.applicationName",
+											"type": "Expression"
+										},
+										"region": {
+											"value": "@pipeline().parameters.region",
+											"type": "Expression"
+										},
+										"datasetName": {
+											"value": "@concat(variables('datasetName'),'_webid_metadata')",
+											"type": "Expression"
+										},
+										"date": {
+											"value": "@formatDateTime(utcnow(),'yyyy/MM/dd/HH')",
+											"type": "Expression"
+										},
+										"format": {
+											"value": "@replace(item().piWebApiRespPath,concat(variables('extractionTool'),'/',pipeline().parameters.applicationName,'/',pipeline().parameters.region,'/',concat(variables('datasetName'),'_webid_metadata'),'/',formatDateTime(utcnow(),'yyyy/MM/dd/HH'),'/piwebidresp_'),'')",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						},
+						{
+							"name": "GetBatchBody",
+							"type": "WebActivity",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": true
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"url": {
+									"value": "@concat('https://coreutils', replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), 'akcore.cloudapp.repsol.com/dap-core-extraction-utils/pisystemreadrequestdata')",
+									"type": "Expression"
+								},
+								"method": "GET",
+								"headers": {
+									"Authorization": {
+										"value": "@concat('Bearer ', variables('httpToken'))",
+										"type": "Expression"
+									},
+									"Content-Type": "text/plain",
+									"X-Batch-Body-Path": {
+										"value": "@{item().batchBodyPath}",
+										"type": "Expression"
+									},
+									"X-Business-Unit": {
+										"value": "@activity('GetMetadata').output.value[0].business_unit",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "UpdateWebId",
+							"type": "WebActivity",
+							"dependsOn": [
+								{
+									"activity": "WebIDRequest",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": true
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"url": {
+									"value": "@concat('https://coreutils', replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), 'akcore.cloudapp.repsol.com/dap-core-extraction-utils/pisystemreadwebidtobd')",
+									"type": "Expression"
+								},
+								"method": "GET",
+								"headers": {
+									"Authorization": {
+										"value": "@concat('Bearer ', variables('httpToken'))",
+										"type": "Expression"
+									},
+									"X-WebApi-Resp-Path": {
+										"value": "@concat(variables('extractionTool'),'/',pipeline().parameters.applicationName,'/',pipeline().parameters.region,'/',concat(variables('datasetName'),'_webid_metadata'),'/',formatDateTime(utcnow(),'yyyy/MM/dd/HH'),'/',concat(variables('datasetName'),'_webid_metadata.'),replace(item().piWebApiRespPath,concat(variables('extractionTool'),'/',pipeline().parameters.applicationName,'/',pipeline().parameters.region,'/',concat(variables('datasetName'),'_webid_metadata'),'/',formatDateTime(utcnow(),'yyyy/MM/dd/HH'),'/piwebidresp_'),''))",
+										"type": "Expression"
+									},
+									"Content-Type": "text/plain",
+									"X-Business-Unit": {
+										"value": "@activity('GetMetadata').output.value[0].business_unit",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "OperationaLogEndKO",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "UpdateWebId",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "OperationalLogPipeline",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"nivel": "ERROR",
+									"modulo": {
+										"value": "UPDATE_WEB_PI",
+										"type": "Expression"
+									},
+									"pipelineName": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"logType": "END",
+									"applicationName": {
+										"value": "@pipeline().parameters.applicationName",
+										"type": "Expression"
+									},
+									"dataDate": {
+										"value": "@formatDateTime(utcnow(),'yyyy/MM/dd')",
+										"type": "Expression"
+									},
+									"region": {
+										"value": "@pipeline().parameters.region",
+										"type": "Expression"
+									},
+									"message": {
+										"value": "@concat('UpdateWebId: ', activity('UpdateWebId').error.message)",
+										"type": "Expression"
+									},
+									"sourceType": {
+										"value": "@variables('extractionTool')",
+										"type": "Expression"
+									},
+									"uid": {
+										"value": "@variables('uid')",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "HttpToken",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "Set appSecretToken",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Set appIdToken",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": true,
+					"secureInput": true
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": "https://login.microsoftonline.com/0a25214f-ee52-483c-b96b-dc79f3227a6f/oauth2/v2.0/token",
+					"method": "POST",
+					"headers": {
+						"Content-Type": "application/x-www-form-urlencoded"
+					},
+					"body": {
+						"value": "@concat('client_id=', variables('appIdToken'), '&client_secret=',  encodeUriComponent(variables('appSecretToken')), '&grant_type=client_credentials&scope=https://graph.microsoft.com/.default')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set appIdToken",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "GetAppIdToken",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "appIdToken",
+					"value": {
+						"value": "@activity('GetAppIdToken').output.value",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "GetAppIdToken",
+				"type": "WebActivity",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": true,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@concat('https://', replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), 'corekv.vault.azure.net/secrets/adapp-extract-id?api-version=7.0')",
+						"type": "Expression"
+					},
+					"connectVia": {
+						"referenceName": "IntegrationRuntimeFreezer",
+						"type": "IntegrationRuntimeReference"
+					},
+					"method": "GET",
+					"authentication": {
+						"type": "MSI",
+						"resource": "https://vault.azure.net"
+					}
+				}
+			},
+			{
+				"name": "GetAppSecretToken",
+				"type": "WebActivity",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": true,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@concat('https://', replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), 'corekv.vault.azure.net/secrets/adsp-extract-secret?api-version=7.0')",
+						"type": "Expression"
+					},
+					"connectVia": {
+						"referenceName": "IntegrationRuntimeFreezer",
+						"type": "IntegrationRuntimeReference"
+					},
+					"method": "GET",
+					"authentication": {
+						"type": "MSI",
+						"resource": "https://vault.azure.net"
+					}
+				}
+			},
+			{
+				"name": "Set appSecretToken",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "GetAppSecretToken",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "appSecretToken",
+					"value": {
+						"value": "@activity('GetAppSecretToken').output.value",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set httpToken",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "HttpToken",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "httpToken",
+					"value": {
+						"value": "@activity('HttpToken').output.access_token",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "BuildWebIDRequest",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "Set httpToken",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": true
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@concat('https://coreutils', replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), 'akcore.cloudapp.repsol.com/dap-core-extraction-utils/pisystemwebidrequest')",
+						"type": "Expression"
+					},
+					"method": "GET",
+					"headers": {
+						"X-Application-Name": {
+							"value": "@pipeline().parameters.applicationName",
+							"type": "Expression"
+						},
+						"X-Region": {
+							"value": "@pipeline().parameters.region",
+							"type": "Expression"
+						},
+						"X-Pi-Server": {
+							"value": "@pipeline().parameters.piServer",
+							"type": "Expression"
+						},
+						"X-Extraction-Tool": {
+							"value": "@variables('extractionTool')",
+							"type": "Expression"
+						},
+						"X-Dataset-Name": {
+							"value": "@variables('datasetName')",
+							"type": "Expression"
+						},
+						"Authorization": {
+							"value": "@concat('Bearer ', variables('httpToken'))",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "GetMetadata",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": {
+							"value": "SELECT * FROM pitagmanager.pi_system_servers WHERE pi_server = '@{pipeline().parameters.piServer}'",
+							"type": "Expression"
+						},
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "AzureSqlDataset",
+						"type": "DatasetReference",
+						"parameters": {
+							"tableName": "pitagmanager.pi_system_servers",
+							"secretName": "db-metadata-secret"
+						}
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "OperationaLogStart",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "OperationalLogPipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": false,
+					"parameters": {
+						"nivel": "INFO",
+						"modulo": {
+							"value": "UPDATE_WEB_PI",
+							"type": "Expression"
+						},
+						"pipelineName": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"logType": "START",
+						"applicationName": {
+							"value": "@pipeline().parameters.applicationName",
+							"type": "Expression"
+						},
+						"dataDate": {
+							"value": "@formatDateTime(utcnow(),'yyyy/MM/dd')",
+							"type": "Expression"
+						},
+						"region": {
+							"value": "@pipeline().parameters.region",
+							"type": "Expression"
+						},
+						"sourceType": {
+							"value": "@variables('extractionTool')",
+							"type": "Expression"
+						},
+						"uid": {
+							"value": "@variables('uid')",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "OperationaLogEnd",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "ForEach",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "OperationalLogPipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": false,
+					"parameters": {
+						"nivel": "INFO",
+						"modulo": {
+							"value": "UPDATE_WEB_PI",
+							"type": "Expression"
+						},
+						"pipelineName": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"logType": "END",
+						"applicationName": {
+							"value": "@pipeline().parameters.applicationName",
+							"type": "Expression"
+						},
+						"dataDate": {
+							"value": "@formatDateTime(utcnow(),'yyyy/MM/dd')",
+							"type": "Expression"
+						},
+						"datasetName": "",
+						"region": {
+							"value": "@pipeline().parameters.region",
+							"type": "Expression"
+						},
+						"sourceType": {
+							"value": "@variables('extractionTool')",
+							"type": "Expression"
+						},
+						"uid": {
+							"value": "@variables('uid')",
+							"type": "Expression"
+						}
+					}
+				}
+			}
+		],
+		"parameters": {
+			"applicationName": {
+				"type": "string",
+				"defaultValue": "AP_REF_PI"
+			},
+			"region": {
+				"type": "string",
+				"defaultValue": "ESP"
+			},
+			"piServer": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"datasetName": {
+				"type": "String",
+				"defaultValue": "pi"
+			},
+			"extractionTool": {
+				"type": "String",
+				"defaultValue": "apis"
+			},
+			"appIdToken": {
+				"type": "String"
+			},
+			"appSecretToken": {
+				"type": "String"
+			},
+			"httpToken": {
+				"type": "String"
+			},
+			"uid": {
+				"type": "String",
+				"defaultValue": "@concat('UPDATE_WEB_PI#$', pipeline().parameters.applicationName, '$_', pipeline().parameters.region, '#', formatDateTime(utcnow(),'yyyy/MM/dd') , '#', utcnow('yyyyMMddHHmmssfff'))"
+			}
+		},
+		"folder": {
+			"name": "extraction/pi"
+		},
+		"annotations": []
+	}
+}

@@ -1,0 +1,118 @@
+{
+	"name": "ProcessorAuxCopyToSilverGov",
+	"properties": {
+		"activities": [
+			{
+				"name": "ForEachSilverList",
+				"type": "ForEach",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@pipeline().parameters.out_getmetadata",
+						"type": "Expression"
+					},
+					"isSequential": false,
+					"activities": [
+						{
+							"name": "ProcessorCopyToSilverList",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "ProcessorCopyToSilver",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"business_unit": {
+										"value": "@toLower(item().datalake)",
+										"type": "Expression"
+									},
+									"layer": {
+										"value": "@item().copy_df_source_layer[0]",
+										"type": "Expression"
+									},
+									"app": {
+										"value": "@item().application_name",
+										"type": "Expression"
+									},
+									"region": {
+										"value": "@item().region",
+										"type": "Expression"
+									},
+									"dataset": {
+										"value": "@item().dataset_name",
+										"type": "Expression"
+									},
+									"datadate": {
+										"value": "@pipeline().parameters.extractionDate",
+										"type": "Expression"
+									},
+									"target_type": {
+										"value": "@toLower(item().copy_df_target_type)",
+										"type": "Expression"
+									},
+									"source_type": {
+										"value": "@item().copy_df_source_type",
+										"type": "Expression"
+									},
+									"parent_uid": {
+										"value": "@variables('uid')",
+										"type": "Expression"
+									},
+									"p_folder_path": {
+										"value": "@pipeline().parameters.p_folder_path",
+										"type": "Expression"
+									},
+									"p_file_name": {
+										"value": "@pipeline().parameters.p_file_name",
+										"type": "Expression"
+									},
+									"is_consolidated": {
+										"value": "@bool(item().is_consolidated)",
+										"type": "Expression"
+									},
+									"overwrite_file": {
+										"value": "@bool(item().overwrite_file)",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"p_folder_path": {
+				"type": "string"
+			},
+			"p_file_name": {
+				"type": "string"
+			},
+			"out_getmetadata": {
+				"type": "array"
+			},
+			"extractionDate": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"uid": {
+				"type": "String"
+			},
+			"outList": {
+				"type": "Array"
+			},
+			"getList": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "processor"
+		},
+		"annotations": []
+	}
+}

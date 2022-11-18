@@ -1,0 +1,40 @@
+{
+	"name": "trigger_ea_eyp_decisionspace365_glb_internal_apis",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "InternalAPIAzureFunctionPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "EA_EYP_DECISIONSPACE365",
+					"region": "GLB",
+					"is_interval": false,
+					"sourceType": "internal_api",
+					"package": "*",
+					"mock": "false"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2021-04-16T09:57:00",
+				"timeZone": "Romance Standard Time",
+				"schedule": {
+					"minutes": [
+						0
+					],
+					"hours": [
+						3
+					]
+				}
+			}
+		}
+	}
+}

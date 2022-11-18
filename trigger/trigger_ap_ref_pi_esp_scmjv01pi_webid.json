@@ -1,0 +1,30 @@
+{
+	"name": "trigger_ap_ref_pi_esp_scmjv01pi_webid",
+	"properties": {
+		"description": "CARTAGENA-SCMJV01PI",
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "PISystemGetWebIDPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "AP_REF_PI",
+					"region": "ESP",
+					"piServer": "SCMJV01PI"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Hour",
+				"interval": 1,
+				"startTime": "2020-05-12T08:34:00",
+				"timeZone": "Romance Standard Time"
+			}
+		}
+	}
+}

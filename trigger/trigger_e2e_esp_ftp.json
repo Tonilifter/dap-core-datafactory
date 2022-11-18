@@ -1,0 +1,39 @@
+{
+	"name": "trigger_e2e_esp_ftp",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "TestE2EFilesPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "AP_E2E_FTP_TESTS",
+					"region": "ESP",
+					"referenceDate": "2020/11/11",
+					"package": "*",
+					"mock": "true"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2020-11-16T15:55:00Z",
+				"timeZone": "UTC",
+				"schedule": {
+					"minutes": [
+						0
+					],
+					"hours": [
+						7
+					]
+				}
+			}
+		}
+	}
+}

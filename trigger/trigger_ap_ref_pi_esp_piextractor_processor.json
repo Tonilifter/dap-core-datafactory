@@ -1,0 +1,29 @@
+{
+	"name": "trigger_ap_ref_pi_esp_piextractor_processor",
+	"properties": {
+		"description": "Lanza processor de smart-monitoring",
+		"annotations": [],
+		"runtimeState": "Started",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "ProcessorPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "AP_REF_PI",
+					"region": "ESP"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Hour",
+				"interval": 2,
+				"startTime": "2020-06-04T13:35:00",
+				"timeZone": "Romance Standard Time"
+			}
+		}
+	}
+}

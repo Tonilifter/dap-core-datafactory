@@ -1,0 +1,41 @@
+{
+	"name": "trigger_teradatacloud_test_catalogo_gob",
+	"properties": {
+		"description": "Trigger creado para probar la extracción de teradata cloud cuando se crean los metadatos desde el catálogo de goierno",
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "TeradataCloudPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "AP_COM_INTELIGENCIA_CLIENTE-test",
+					"region": "GLB",
+					"is_interval": false,
+					"sourceType": "db",
+					"mock": "false",
+					"sourceTypeExtraction": "teradata"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2020-10-21T06:00:00Z",
+				"timeZone": "UTC",
+				"schedule": {
+					"minutes": [
+						0
+					],
+					"hours": [
+						10
+					]
+				}
+			}
+		}
+	}
+}

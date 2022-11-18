@@ -1,0 +1,49 @@
+{
+	"name": "trigger_ap_ref_pi_esp_ssbio05pi01_restart_streaming",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "RestartPIStreaming",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"ehName": "pi-ssbio05pi01",
+					"piServer": "SSBIO05PI01",
+					"applicationName": "AP_REF_PI",
+					"region": "ESP"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2021-09-20T09:25:00",
+				"timeZone": "Romance Standard Time",
+				"schedule": {
+					"minutes": [
+						0
+					],
+					"hours": [
+						1,
+						3,
+						5,
+						7,
+						9,
+						11,
+						13,
+						15,
+						17,
+						19,
+						21,
+						23
+					]
+				}
+			}
+		}
+	}
+}

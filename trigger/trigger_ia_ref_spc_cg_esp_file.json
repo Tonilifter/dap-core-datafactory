@@ -1,0 +1,32 @@
+{
+	"name": "trigger_ia_ref_spc_cg_esp_file",
+	"properties": {
+		"description": "Timer Trigger cada hora que lanza la extracción departamental y su posterior DDG de ingesta en processed/sanited",
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "DepartamentalStructuredFilePipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "IA_REF_SPC_CG",
+					"region": "ESP",
+					"sourceType": "file",
+					"package": "*",
+					"mock": "false"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Minute",
+				"interval": 30,
+				"startTime": "2020-10-01T07:30:00Z",
+				"timeZone": "UTC"
+			}
+		}
+	}
+}

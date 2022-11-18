@@ -1,0 +1,103 @@
+{
+    "name": "DatalakeArchiverCopyModifiedFoldersPipeline",
+    "properties": {
+        "activities": [{
+            "name": "ForEachModifiedFolder",
+            "type": "ForEach",
+            "dependsOn": [],
+            "userProperties": [],
+            "typeProperties": {
+                "items": {
+                    "value": "@pipeline().parameters.modifiedFolders",
+                    "type": "Expression"
+                },
+                "isSequential": false,
+                "batchCount": 5,
+                "activities": [{
+                    "name": "Archiver",
+                    "type": "Copy",
+                    "dependsOn": [],
+                    "policy": {
+                        "timeout": "7.00:00:00",
+                        "retry": 0,
+                        "retryIntervalInSeconds": 30,
+                        "secureOutput": false,
+                        "secureInput": false
+                    },
+                    "userProperties": [],
+                    "typeProperties": {
+                        "source": {
+                            "type": "BinarySource",
+                            "storeSettings": {
+                                "type": "AzureDataLakeStoreReadSettings",
+                                "recursive": true,
+                                "deleteFilesAfterCompletion": false
+                            },
+                            "formatSettings": {
+                                "type": "BinaryReadSettings"
+                            }
+                        },
+                        "sink": {
+                            "type": "BinarySink",
+                            "storeSettings": {
+                                "type": "AzureBlobFSWriteSettings",
+                                "copyBehavior": "PreserveHierarchy"
+                            }
+                        },
+                        "enableStaging": false
+                    },
+                    "inputs": [{
+                        "referenceName": "DatalakeArchiverSourceDataset",
+                        "type": "DatasetReference",
+                        "parameters": {
+                            "dl_name": {
+                                "value": "@concat(replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), pipeline().parameters.businessUnit, 'dapdls')",
+                                "type": "Expression"
+                            },
+                            "root_folder": {
+                                "value": "@item()",
+                                "type": "Expression"
+                            }
+                        }
+                    }],
+                    "outputs": [{
+                        "referenceName": "DatalakeArchiverSinkDataset",
+                        "type": "DatasetReference",
+                        "parameters": {
+                            "datalakeContainer": {
+                                "value": "@pipeline().parameters.businessUnit",
+                                "type": "Expression"
+                            },
+                            "datalakeRootFolder": {
+                                "value": "@{item()}/ts=@{pipeline().parameters.copyTimestamp}",
+                                "type": "Expression"
+                            },
+                            "datalakeName": {
+                                "value": "@concat(replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), 'dlar')",
+                                "type": "Expression"
+                            }
+                        }
+                    }]
+                }]
+            }
+        }],
+        "parameters": {
+            "modifiedFolders": {
+                "type": "array"
+            },
+            "businessUnit": {
+                "type": "string"
+            },
+            "rootFolder": {
+                "type": "string"
+            },
+            "copyTimestamp": {
+                "type": "string"
+            }
+        },
+        "folder": {
+            "name": "archiver"
+        },
+        "annotations": []
+    }
+}

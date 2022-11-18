@@ -1,0 +1,40 @@
+{
+	"name": "trigger_ap_corp_synergi_life_glb_sql_adw",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "SQLServerPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "AP_CORP_SYNERGI_LIFE",
+					"region": "GLB",
+					"is_interval": false,
+					"sourceType": "db",
+					"mock": "false",
+					"package": "SYNERGI DB CORPORATE - silver adw"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2019-06-05T01:00:00Z",
+				"timeZone": "UTC",
+				"schedule": {
+					"minutes": [
+						0
+					],
+					"hours": [
+						0
+					]
+				}
+			}
+		}
+	}
+}

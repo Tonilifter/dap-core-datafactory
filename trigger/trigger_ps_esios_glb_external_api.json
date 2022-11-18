@@ -1,0 +1,42 @@
+{
+	"name": "trigger_ps_esios_glb_external_api",
+	"properties": {
+		"description": "Daily trigger for ESIOS data extraction",
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "ExternalAPIAzureFunctionPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "PS_ESIOS",
+					"region": "GLB",
+					"is_interval": false,
+					"sourceType": "external_api",
+					"package": "*",
+					"mock": "false",
+					"is_durable": true
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2021-05-06T15:33:00",
+				"timeZone": "Romance Standard Time",
+				"schedule": {
+					"minutes": [
+						30
+					],
+					"hours": [
+						8
+					]
+				}
+			}
+		}
+	}
+}

@@ -1,0 +1,39 @@
+{
+	"name": "trigger_ap_eyp_pi_per_stats",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "PISystemProcessPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "AP_EYP_PI",
+					"region": "PER",
+					"piServer": "PECUZ1WPPAF001",
+					"startTime": "y",
+					"endTime": "t",
+					"mode": "stats",
+					"interval": "1d",
+					"historicalExecution": false
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2021-12-02T12:00:00Z",
+				"timeZone": "UTC",
+				"schedule": {
+					"hours": [
+						1
+					]
+				}
+			}
+		}
+	}
+}

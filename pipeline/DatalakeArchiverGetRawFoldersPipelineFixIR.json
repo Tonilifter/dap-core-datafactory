@@ -1,0 +1,353 @@
+{
+	"name": "DatalakeArchiverGetRawFoldersPipelineFixIR",
+	"properties": {
+		"activities": [
+			{
+				"name": "GetRawFolders",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "Set httpToken",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 2,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": true
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@concat('https://coreutils', replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), 'akcore.cloudapp.repsol.com/dap-core-extraction-utils/archiver-raw-folders?business_unit=', pipeline().parameters.businessUnit, '&folder=', pipeline().parameters.rootFolder, '&timestamp=', pipeline().parameters.archiverProcessTimestamp)",
+						"type": "Expression"
+					},
+					"method": "GET",
+					"headers": {
+						"Authorization": {
+							"value": "@concat('Bearer ', variables('httpToken'))",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "HttpToken",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "Set appSecretToken",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Set appIdToken",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": true,
+					"secureInput": true
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": "https://login.microsoftonline.com/0a25214f-ee52-483c-b96b-dc79f3227a6f/oauth2/v2.0/token",
+					"method": "POST",
+					"headers": {
+						"Content-Type": "application/x-www-form-urlencoded"
+					},
+					"body": {
+						"value": "@concat('client_id=', variables('appIdToken'), '&client_secret=',  encodeUriComponent(variables('appSecretToken')), '&grant_type=client_credentials&scope=https://graph.microsoft.com/.default')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set httpToken",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "HttpToken",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "httpToken",
+					"value": {
+						"value": "@activity('HttpToken').output.access_token",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "IterateRawFolders",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "GetRawFolders",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('GetRawFolders').output.folders",
+						"type": "Expression"
+					},
+					"isSequential": false,
+					"batchCount": 2,
+					"activities": [
+						{
+							"name": "DatalakeArchiverCopyModifiedFolders",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "GetModifiedFolders",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "DatalakeArchiverCopyModifiedFoldersPipelineFixIR",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"modifiedFolders": {
+										"value": "@activity('GetModifiedFolders').output.folders",
+										"type": "Expression"
+									},
+									"businessUnit": {
+										"value": "@pipeline().parameters.businessUnit",
+										"type": "Expression"
+									},
+									"rootFolder": {
+										"value": "@item()",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "GetModifiedFolders",
+							"type": "WebActivity",
+							"dependsOn": [
+								{
+									"activity": "Set renew_httpToken",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 2,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": true
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"url": {
+									"value": "@concat('https://coreutils', replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), 'akcore.cloudapp.repsol.com/dap-core-extraction-utils/archiver-modified-folders-v2?storage_account=', concat(replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), 'dlar'), '&business_unit=', pipeline().parameters.businessUnit, '&folder=', pipeline().parameters.rootFolder, '&raw_folder=', item(), '&timestamp=', pipeline().parameters.archiverProcessTimestamp)",
+									"type": "Expression"
+								},
+								"method": "GET",
+								"headers": {
+									"Authorization": {
+										"value": "@concat('Bearer ', variables('httpToken'))",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "Renew_HttpToken",
+							"type": "WebActivity",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": true,
+								"secureInput": true
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"url": "https://login.microsoftonline.com/0a25214f-ee52-483c-b96b-dc79f3227a6f/oauth2/v2.0/token",
+								"method": "POST",
+								"headers": {
+									"Content-Type": "application/x-www-form-urlencoded"
+								},
+								"body": {
+									"value": "@concat('client_id=', variables('appIdToken'), '&client_secret=',  encodeUriComponent(variables('appSecretToken')), '&grant_type=client_credentials&scope=https://graph.microsoft.com/.default')",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Set renew_httpToken",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "Renew_HttpToken",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "httpToken",
+								"value": {
+									"value": "@activity('Renew_HttpToken').output.access_token",
+									"type": "Expression"
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Set appIdToken",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "GetAppIdToken",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "appIdToken",
+					"value": {
+						"value": "@activity('GetAppIdToken').output.value",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "GetAppIdToken",
+				"type": "WebActivity",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": true,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@concat('https://', replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), 'corekv.vault.azure.net/secrets/adapp-extract-id?api-version=7.0')",
+						"type": "Expression"
+					},
+					"connectVia": {
+						"referenceName": "IntegrationRuntimeFreezer",
+						"type": "IntegrationRuntimeReference"
+					},
+					"method": "GET",
+					"authentication": {
+						"type": "MSI",
+						"resource": "https://vault.azure.net"
+					}
+				}
+			},
+			{
+				"name": "GetAppSecretToken",
+				"type": "WebActivity",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": true,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@concat('https://', replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), 'corekv.vault.azure.net/secrets/adsp-extract-secret?api-version=7.0')",
+						"type": "Expression"
+					},
+					"connectVia": {
+						"referenceName": "IntegrationRuntimeFreezer",
+						"type": "IntegrationRuntimeReference"
+					},
+					"method": "GET",
+					"authentication": {
+						"type": "MSI",
+						"resource": "https://vault.azure.net"
+					}
+				}
+			},
+			{
+				"name": "Set appSecretToken",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "GetAppSecretToken",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "appSecretToken",
+					"value": {
+						"value": "@activity('GetAppSecretToken').output.value",
+						"type": "Expression"
+					}
+				}
+			}
+		],
+		"parameters": {
+			"archiverProcessTimestamp": {
+				"type": "string"
+			},
+			"businessUnit": {
+				"type": "string"
+			},
+			"rootFolder": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"appIdToken": {
+				"type": "String"
+			},
+			"appSecretToken": {
+				"type": "String"
+			},
+			"httpToken": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "archiver/fix_ir"
+		},
+		"annotations": []
+	}
+}

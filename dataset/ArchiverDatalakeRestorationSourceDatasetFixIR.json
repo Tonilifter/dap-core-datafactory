@@ -1,0 +1,44 @@
+{
+	"name": "ArchiverDatalakeRestorationSourceDatasetFixIR",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "AzureDataLakeStorageFreezer",
+			"type": "LinkedServiceReference",
+			"parameters": {
+				"storageAccount": {
+					"value": "@dataset().datalakeName",
+					"type": "Expression"
+				}
+			}
+		},
+		"parameters": {
+			"datalakeContainer": {
+				"type": "string"
+			},
+			"datalakeRootFolder": {
+				"type": "string"
+			},
+			"datalakeName": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "archiver/fix_ir"
+		},
+		"annotations": [],
+		"type": "Binary",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"folderPath": {
+					"value": "@dataset().datalakeRootFolder",
+					"type": "Expression"
+				},
+				"fileSystem": {
+					"value": "@dataset().datalakeContainer",
+					"type": "Expression"
+				}
+			}
+		}
+	}
+}

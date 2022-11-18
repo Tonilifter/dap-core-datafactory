@@ -1,0 +1,19 @@
+{
+	"name": "AzureFunctionSendAlert",
+	"type": "Microsoft.DataFactory/factories/linkedservices",
+	"properties": {
+		"annotations": [],
+		"type": "AzureFunction",
+		"typeProperties": {
+			"functionAppUrl": "https://daplatform0101lalertfa.azurewebsites.net",
+			"functionKey": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "KeyVaultLinkedService",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": "daplatform0101ingestalertfapp"
+			}
+		}
+	}
+}

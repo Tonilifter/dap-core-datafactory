@@ -1,0 +1,30 @@
+{
+	"name": "trigger_ia_com_digital_eess_esp_eh",
+	"properties": {
+		"description": "Trigger launch all DimIoT pipelines",
+		"annotations": [],
+		"runtimeState": "Started",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "IngestionStreamingPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "IA_COM_DIGITAL_EESS",
+					"region": "ESP",
+					"workers": "2:8"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Hour",
+				"interval": 1,
+				"startTime": "2020-02-28T15:54:00Z",
+				"timeZone": "UTC"
+			}
+		}
+	}
+}

@@ -1,0 +1,614 @@
+{
+	"name": "ProcessorCopyToSilver",
+	"properties": {
+		"activities": [
+			{
+				"name": "OperationaLogStart",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "OperationalLogPipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"nivel": "INFO",
+						"modulo": {
+							"value": "@variables('module_name')",
+							"type": "Expression"
+						},
+						"pipelineName": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"logType": "START",
+						"applicationName": {
+							"value": "@pipeline().parameters.app",
+							"type": "Expression"
+						},
+						"dataDate": {
+							"value": "@pipeline().parameters.datadate",
+							"type": "Expression"
+						},
+						"datasetName": {
+							"value": "@pipeline().parameters.dataset",
+							"type": "Expression"
+						},
+						"region": {
+							"value": "@pipeline().parameters.region",
+							"type": "Expression"
+						},
+						"sourceType": {
+							"value": "@pipeline().parameters.source_type",
+							"type": "Expression"
+						},
+						"uid": {
+							"value": "@variables('uid')",
+							"type": "Expression"
+						},
+						"parentUid": {
+							"value": "@pipeline().parameters.parent_uid",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "IsEmptyDatasetOrDate",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "OperationaLogStart",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@and(or(or(equals(pipeline().parameters.dataset, '*'), empty(pipeline().parameters.dataset)), or(equals(pipeline().parameters.datadate, '*'), empty(pipeline().parameters.datadate))),not(pipeline().parameters.is_consolidated))",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "OperationalLogDebug",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "OperationalLogPipeline",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"nivel": "DEBUG",
+									"modulo": {
+										"value": "@variables('module_name')",
+										"type": "Expression"
+									},
+									"pipelineName": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"logType": "DEBUG",
+									"applicationName": {
+										"value": "@pipeline().parameters.app",
+										"type": "Expression"
+									},
+									"dataDate": {
+										"value": "@pipeline().parameters.datadate",
+										"type": "Expression"
+									},
+									"datasetName": {
+										"value": "@pipeline().parameters.dataset",
+										"type": "Expression"
+									},
+									"region": {
+										"value": "@pipeline().parameters.region",
+										"type": "Expression"
+									},
+									"message": {
+										"value": "@concat('Processing copy of application_name: ', pipeline().parameters.app, ', region: ', pipeline().parameters.region,'  and dataset_name: ', pipeline().parameters.dataset)",
+										"type": "Expression"
+									},
+									"sourceType": {
+										"value": "@pipeline().parameters.source_type",
+										"type": "Expression"
+									},
+									"uid": {
+										"value": "@variables('uid')",
+										"type": "Expression"
+									},
+									"parentUid": {
+										"value": "@pipeline().parameters.parent_uid",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "OperationalLogEndEmptyKO",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "OperationalLogPipeline",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"nivel": "ERROR",
+									"modulo": {
+										"value": "@variables('module_name')",
+										"type": "Expression"
+									},
+									"pipelineName": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"logType": "END",
+									"applicationName": {
+										"value": "@pipeline().parameters.app",
+										"type": "Expression"
+									},
+									"dataDate": {
+										"value": "@pipeline().parameters.datadate",
+										"type": "Expression"
+									},
+									"datasetName": {
+										"value": "@pipeline().parameters.dataset",
+										"type": "Expression"
+									},
+									"region": {
+										"value": "@pipeline().parameters.region",
+										"type": "Expression"
+									},
+									"message": "The dataset and datadate parameters cannot be empty",
+									"sourceType": {
+										"value": "@pipeline().parameters.source_type",
+										"type": "Expression"
+									},
+									"uid": {
+										"value": "@variables('uid')",
+										"type": "Expression"
+									},
+									"parentUid": {
+										"value": "@pipeline().parameters.parent_uid",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "TargetType",
+				"type": "Switch",
+				"dependsOn": [
+					{
+						"activity": "IsEmptyDatasetOrDate",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"on": {
+						"value": "@toLower(pipeline().parameters.target_type)",
+						"type": "Expression"
+					},
+					"cases": [
+						{
+							"value": "dwh",
+							"activities": [
+								{
+									"name": "CopyToSilverDwh",
+									"type": "ExecutePipeline",
+									"dependsOn": [],
+									"userProperties": [],
+									"typeProperties": {
+										"pipeline": {
+											"referenceName": "CopyToSilverDwh",
+											"type": "PipelineReference"
+										},
+										"waitOnCompletion": true,
+										"parameters": {
+											"business_unit": {
+												"value": "@pipeline().parameters.business_unit",
+												"type": "Expression"
+											},
+											"layer": {
+												"value": "@pipeline().parameters.layer",
+												"type": "Expression"
+											},
+											"app": {
+												"value": "@pipeline().parameters.app",
+												"type": "Expression"
+											},
+											"region": {
+												"value": "@pipeline().parameters.region",
+												"type": "Expression"
+											},
+											"dataset": {
+												"value": "@pipeline().parameters.dataset",
+												"type": "Expression"
+											},
+											"datadate": {
+												"value": "@pipeline().parameters.datadate",
+												"type": "Expression"
+											},
+											"source_type": {
+												"value": "@pipeline().parameters.source_type",
+												"type": "Expression"
+											},
+											"is_consolidated": {
+												"value": "@pipeline().parameters.is_consolidated",
+												"type": "Expression"
+											},
+											"p_dl_name": {
+												"value": "@variables('p_dl_name')",
+												"type": "Expression"
+											},
+											"filter_path": {
+												"value": "@variables('filter_path')",
+												"type": "Expression"
+											},
+											"output_dataset": {
+												"value": "@variables('output_dataset')",
+												"type": "Expression"
+											}
+										}
+									}
+								}
+							]
+						},
+						{
+							"value": "adl",
+							"activities": [
+								{
+									"name": "CopyToSilverAdl",
+									"type": "ExecutePipeline",
+									"dependsOn": [],
+									"userProperties": [],
+									"typeProperties": {
+										"pipeline": {
+											"referenceName": "CopyToSilverAdl",
+											"type": "PipelineReference"
+										},
+										"waitOnCompletion": true,
+										"parameters": {
+											"business_unit": {
+												"value": "@pipeline().parameters.business_unit",
+												"type": "Expression"
+											},
+											"layer": {
+												"value": "@pipeline().parameters.layer",
+												"type": "Expression"
+											},
+											"app": {
+												"value": "@pipeline().parameters.app",
+												"type": "Expression"
+											},
+											"region": {
+												"value": "@pipeline().parameters.region",
+												"type": "Expression"
+											},
+											"dataset": {
+												"value": "@pipeline().parameters.dataset",
+												"type": "Expression"
+											},
+											"datadate": {
+												"value": "@pipeline().parameters.datadate",
+												"type": "Expression"
+											},
+											"source_type": {
+												"value": "@pipeline().parameters.source_type",
+												"type": "Expression"
+											},
+											"p_folder_path": {
+												"value": "@pipeline().parameters.p_folder_path",
+												"type": "Expression"
+											},
+											"p_file_name": {
+												"value": "@pipeline().parameters.p_file_name",
+												"type": "Expression"
+											},
+											"is_consolidated": {
+												"value": "@pipeline().parameters.is_consolidated",
+												"type": "Expression"
+											},
+											"p_dl_name": {
+												"value": "@variables('p_dl_name')",
+												"type": "Expression"
+											},
+											"output_dataset": {
+												"value": "@variables('output_dataset')",
+												"type": "Expression"
+											},
+											"filter_path": {
+												"value": "@variables('filter_path')",
+												"type": "Expression"
+											},
+											"overwrite_file": {
+												"value": "@pipeline().parameters.overwrite_file",
+												"type": "Expression"
+											}
+										}
+									}
+								}
+							]
+						}
+					],
+					"defaultActivities": [
+						{
+							"name": "OperationaLogErrorSelectingMode",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "OperationalLogPipeline",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"nivel": "ERROR",
+									"modulo": {
+										"value": "@variables('module_name')",
+										"type": "Expression"
+									},
+									"pipelineName": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"logType": "ERROR",
+									"applicationName": {
+										"value": "@pipeline().parameters.app",
+										"type": "Expression"
+									},
+									"dataDate": {
+										"value": "@pipeline().parameters.datadate",
+										"type": "Expression"
+									},
+									"datasetName": {
+										"value": "@pipeline().parameters.dataset",
+										"type": "Expression"
+									},
+									"region": {
+										"value": "@pipeline().parameters.region",
+										"type": "Expression"
+									},
+									"message": {
+										"value": "Not valid target_type found, please select a valid target_type",
+										"type": "Expression"
+									},
+									"sourceType": {
+										"value": "@pipeline().parameters.source_type",
+										"type": "Expression"
+									},
+									"uid": {
+										"value": "@variables('uid')",
+										"type": "Expression"
+									},
+									"parentUid": {
+										"value": "@pipeline().parameters.parent_uid",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "OperationalLogEnd",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "TargetType",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "OperationalLogPipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"nivel": "INFO",
+						"modulo": {
+							"value": "@variables('module_name')",
+							"type": "Expression"
+						},
+						"pipelineName": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"logType": "END",
+						"applicationName": {
+							"value": "@pipeline().parameters.app",
+							"type": "Expression"
+						},
+						"dataDate": {
+							"value": "@pipeline().parameters.datadate",
+							"type": "Expression"
+						},
+						"datasetName": {
+							"value": "@pipeline().parameters.dataset",
+							"type": "Expression"
+						},
+						"region": {
+							"value": "@pipeline().parameters.region",
+							"type": "Expression"
+						},
+						"sourceType": {
+							"value": "@pipeline().parameters.source_type",
+							"type": "Expression"
+						},
+						"uid": {
+							"value": "@variables('uid')",
+							"type": "Expression"
+						},
+						"parentUid": {
+							"value": "@pipeline().parameters.parent_uid",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "OperationalLogEndKO",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "TargetType",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "OperationalLogPipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"nivel": "ERROR",
+						"modulo": {
+							"value": "@variables('module_name')",
+							"type": "Expression"
+						},
+						"pipelineName": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"logType": "END",
+						"applicationName": {
+							"value": "@pipeline().parameters.app",
+							"type": "Expression"
+						},
+						"dataDate": {
+							"value": "@pipeline().parameters.datadate",
+							"type": "Expression"
+						},
+						"datasetName": {
+							"value": "@pipeline().parameters.dataset",
+							"type": "Expression"
+						},
+						"region": {
+							"value": "@pipeline().parameters.region",
+							"type": "Expression"
+						},
+						"message": {
+							"value": "@concat('TargetType: ', activity('TargetType').error.message)",
+							"type": "Expression"
+						},
+						"sourceType": {
+							"value": "@pipeline().parameters.source_type",
+							"type": "Expression"
+						},
+						"uid": {
+							"value": "@variables('uid')",
+							"type": "Expression"
+						},
+						"parentUid": {
+							"value": "@pipeline().parameters.parent_uid",
+							"type": "Expression"
+						}
+					}
+				}
+			}
+		],
+		"parameters": {
+			"business_unit": {
+				"type": "string",
+				"defaultValue": "com"
+			},
+			"layer": {
+				"type": "string",
+				"defaultValue": "sanited"
+			},
+			"app": {
+				"type": "string",
+				"defaultValue": "AP_E2E_TESTS_INCREMENTAL"
+			},
+			"region": {
+				"type": "string",
+				"defaultValue": "ESP"
+			},
+			"dataset": {
+				"type": "string",
+				"defaultValue": "e2e.locations_e2e_incremental_consolidated"
+			},
+			"datadate": {
+				"type": "string"
+			},
+			"target_type": {
+				"type": "string",
+				"defaultValue": "adl"
+			},
+			"source_type": {
+				"type": "string",
+				"defaultValue": "db"
+			},
+			"parent_uid": {
+				"type": "string"
+			},
+			"p_folder_path": {
+				"type": "string"
+			},
+			"p_file_name": {
+				"type": "string"
+			},
+			"is_consolidated": {
+				"type": "bool",
+				"defaultValue": false
+			},
+			"overwrite_file": {
+				"type": "bool",
+				"defaultValue": false
+			}
+		},
+		"variables": {
+			"uid": {
+				"type": "String",
+				"defaultValue": "@concat('PROCESSOR_DF_COPY#$',pipeline().parameters.app,'$_',pipeline().parameters.region,if(empty(pipeline().parameters.dataset),'',concat('_',pipeline().parameters.dataset)),'#', pipeline().parameters.datadate, '#', utcnow('yyyyMMddHHmmssfff'))"
+			},
+			"module_name": {
+				"type": "String",
+				"defaultValue": "PROCESSOR_DF_COPY"
+			},
+			"filter_path": {
+				"type": "String",
+				"defaultValue": "@{if(not(pipeline().parameters.is_consolidated),concat('year=', split(pipeline().parameters.datadate, '/')[0],'/month=', split(pipeline().parameters.datadate, '/')[1],'/day=', split(pipeline().parameters.datadate, '/')[2]),'isValid=S')}"
+			},
+			"output_dataset": {
+				"type": "String",
+				"defaultValue": "@if(pipeline().parameters.is_consolidated, replace(pipeline().parameters.dataset,'_consolidated',''), pipeline().parameters.dataset)"
+			},
+			"p_dl_name": {
+				"type": "String",
+				"defaultValue": "@{concat(replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), pipeline().parameters.business_unit, 'dapdls')}"
+			}
+		},
+		"folder": {
+			"name": "processor"
+		},
+		"annotations": []
+	}
+}

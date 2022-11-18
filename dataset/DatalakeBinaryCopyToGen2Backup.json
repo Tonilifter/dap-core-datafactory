@@ -1,0 +1,34 @@
+{
+	"name": "DatalakeBinaryCopyToGen2Backup",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "AzureDataLakeStoreLinkedService",
+			"type": "LinkedServiceReference",
+			"parameters": {
+				"p_dl_name": {
+					"value": "@dataset().p_dl_name",
+					"type": "Expression"
+				}
+			}
+		},
+		"parameters": {
+			"p_dl_name": {
+				"type": "string"
+			},
+			"p_folder_path": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"type": "Binary",
+		"typeProperties": {
+			"location": {
+				"type": "AzureDataLakeStoreLocation",
+				"folderPath": {
+					"value": "@dataset().p_folder_path",
+					"type": "Expression"
+				}
+			}
+		}
+	}
+}

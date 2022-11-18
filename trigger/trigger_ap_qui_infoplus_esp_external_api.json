@@ -1,0 +1,42 @@
+{
+	"name": "trigger_ap_qui_infoplus_esp_external_api",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "ExternalAPIAzureFunctionPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "AP_QUI_INFOPLUS",
+					"region": "ESP",
+					"is_interval": false,
+					"sourceType": "external_api",
+					"package": "*",
+					"mock": "false",
+					"is_durable": true,
+					"referenceDate": "@formatDateTime(convertFromUtc(trigger().startTime, 'UTC'),'yyyy/MM/dd')"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2021-12-21T01:00:00Z",
+				"timeZone": "UTC",
+				"schedule": {
+					"minutes": [
+						0
+					],
+					"hours": [
+						1
+					]
+				}
+			}
+		}
+	}
+}

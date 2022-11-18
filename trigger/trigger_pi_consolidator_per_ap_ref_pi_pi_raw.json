@@ -1,0 +1,41 @@
+{
+	"name": "trigger_pi_consolidator_per_ap_ref_pi_pi_raw",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "ConsolidatorPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"layer": "raw",
+					"source": "apis",
+					"application": "AP_REF_PI",
+					"region": "PER",
+					"servicePrincipalName": "ingest",
+					"businessUnit": "ind",
+					"referenceDate": "@formatDateTime(addDays(convertFromUtc(trigger().startTime, 'Romance Standard Time'), -1),'yyyy/MM/dd')"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2021-10-21T09:55:00",
+				"timeZone": "Romance Standard Time",
+				"schedule": {
+					"minutes": [
+						30
+					],
+					"hours": [
+						2
+					]
+				}
+			}
+		}
+	}
+}

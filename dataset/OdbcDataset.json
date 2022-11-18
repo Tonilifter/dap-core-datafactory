@@ -1,0 +1,28 @@
+{
+	"name": "OdbcDataset",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "ODBCLinkedServicePOC",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"tableODBC": {
+				"type": "string",
+				"defaultValue": "VibWaveform"
+			},
+			"secretName": {
+				"type": "string",
+				"defaultValue": "df-test-conn-odbc"
+			}
+		},
+		"annotations": [],
+		"type": "OdbcTable",
+		"schema": [],
+		"typeProperties": {
+			"tableName": {
+				"value": "@dataset().tableODBC",
+				"type": "Expression"
+			}
+		}
+	}
+}

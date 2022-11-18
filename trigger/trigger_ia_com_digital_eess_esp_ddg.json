@@ -1,0 +1,35 @@
+{
+	"name": "trigger_ia_com_digital_eess_esp_ddg",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Started",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "DdgPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"processId": "dim_ddg_wash"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2020-05-18T23:59:00Z",
+				"timeZone": "UTC",
+				"schedule": {
+					"minutes": [
+						0
+					],
+					"hours": [
+						1
+					]
+				}
+			}
+		}
+	}
+}

@@ -1,0 +1,29 @@
+{
+	"name": "trigger_ia_corp_ems_esp_eh",
+	"properties": {
+		"description": "ems-b2c trigger for dumper ingestion.",
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "IngestionStreamingPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "IA_CORP_EMS",
+					"region": "ESP"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Minute",
+				"interval": 15,
+				"startTime": "2020-04-14T00:00:00Z",
+				"timeZone": "UTC"
+			}
+		}
+	}
+}

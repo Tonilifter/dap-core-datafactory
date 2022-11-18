@@ -1,0 +1,30 @@
+{
+	"name": "trigger_ap_ref_pi_esp_sslcg04pi10_webid",
+	"properties": {
+		"description": "CORUÑA-SSLCG04PI10",
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "PISystemGetWebIDPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "AP_REF_PI",
+					"region": "ESP",
+					"piServer": "SSLCG04PI10"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Hour",
+				"interval": 1,
+				"startTime": "2020-05-12T08:36:00",
+				"timeZone": "Romance Standard Time"
+			}
+		}
+	}
+}

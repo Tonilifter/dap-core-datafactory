@@ -1,0 +1,36 @@
+{
+	"name": "trigger_am_ind_catalyzer_esp_ap_ref_pi_1d",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "ProviderPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"referenceDate": "t",
+					"provider_id": "catalyzer-pi-provider"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2021-11-25T08:38:00",
+				"timeZone": "Romance Standard Time",
+				"schedule": {
+					"minutes": [
+						10
+					],
+					"hours": [
+						4
+					]
+				}
+			}
+		}
+	}
+}

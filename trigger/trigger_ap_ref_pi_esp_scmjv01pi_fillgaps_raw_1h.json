@@ -1,0 +1,32 @@
+{
+	"name": "trigger_ap_ref_pi_esp_scmjv01pi_fillgaps_raw_1h",
+	"properties": {
+		"description": "Trigger rellenado huecos brutos horarios Cartagena",
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "PISystemFillGapsPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "AP_REF_PI",
+					"region": "ESP",
+					"piServer": "SCMJV01PI",
+					"mode": "raw",
+					"interval": "1h"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Hour",
+				"interval": 4,
+				"startTime": "2020-11-25T18:55:00",
+				"timeZone": "Romance Standard Time"
+			}
+		}
+	}
+}

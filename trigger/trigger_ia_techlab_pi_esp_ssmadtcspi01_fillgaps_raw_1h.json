@@ -1,0 +1,32 @@
+{
+	"name": "trigger_ia_techlab_pi_esp_ssmadtcspi01_fillgaps_raw_1h",
+	"properties": {
+		"description": "Trigger rellenado huecos brutos horarios techlab caso especial 1h",
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "PISystemFillGapsPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "IA_TECHLAB_PI",
+					"region": "ESP",
+					"piServer": "SSMADTCSPI01",
+					"mode": "raw",
+					"interval": "1h"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Hour",
+				"interval": 4,
+				"startTime": "2021-11-19T09:42:00",
+				"timeZone": "Romance Standard Time"
+			}
+		}
+	}
+}

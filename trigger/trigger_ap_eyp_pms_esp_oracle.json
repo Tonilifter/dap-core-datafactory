@@ -1,0 +1,40 @@
+{
+	"name": "trigger_ap_eyp_pms_esp_oracle",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "OraclePipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "AP_EYP_PMS",
+					"region": "ESP",
+					"is_interval": true,
+					"sourceType": "db",
+					"mock": false,
+					"package": "ENERGY COMPONENT - ESP"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2019-11-13T02:00:00Z",
+				"timeZone": "UTC",
+				"schedule": {
+					"minutes": [
+						0
+					],
+					"hours": [
+						2
+					]
+				}
+			}
+		}
+	}
+}

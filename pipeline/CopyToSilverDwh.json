@@ -1,0 +1,345 @@
+{
+	"name": "CopyToSilverDwh",
+	"properties": {
+		"activities": [
+			{
+				"name": "CopyFinal",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "CopyWithColumns",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "ParquetSource",
+						"storeSettings": {
+							"type": "AzureDataLakeStoreReadSettings",
+							"recursive": true,
+							"wildcardFolderPath": {
+								"value": "@concat('processed/', pipeline().parameters.layer, '/',variables('tmp_dir'),'/',pipeline().parameters.app,'/',pipeline().parameters.region,'/',pipeline().parameters.dataset, '/', pipeline().parameters.filter_path,'*')",
+								"type": "Expression"
+							},
+							"wildcardFileName": "*.*"
+						}
+					},
+					"sink": {
+						"type": "SqlDWSink",
+						"preCopyScript": {
+							"value": "@{concat('IF EXISTS (SELECT t.* FROM sys.tables t JOIN sys.schemas s ON s.schema_id = t.schema_id WHERE t.name = ''', pipeline().parameters.output_dataset, ''' and s.name = ''', variables('dw_schema_name'), ''')\n\tDELETE FROM [', variables('dw_schema_name'), '].[', pipeline().parameters.output_dataset, '] WHERE load_data_date = ''',pipeline().parameters.datadate,'''')}",
+							"type": "Expression"
+						},
+						"allowPolyBase": true,
+						"polyBaseSettings": {
+							"rejectValue": 0,
+							"rejectType": "value",
+							"useTypeDefault": true
+						},
+						"tableOption": "autoCreate",
+						"disableMetricsCollection": false
+					},
+					"enableStaging": false
+				},
+				"inputs": [
+					{
+						"referenceName": "DataLakeParquetCopyPeriodicallySink",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_dl_name": {
+								"value": "@pipeline().parameters.p_dl_name",
+								"type": "Expression"
+							},
+							"layer": {
+								"value": "@concat('processed/', pipeline().parameters.layer, '/', variables('tmp_dir'))",
+								"type": "Expression"
+							},
+							"app": {
+								"value": "@pipeline().parameters.app",
+								"type": "Expression"
+							},
+							"region": {
+								"value": "@pipeline().parameters.region",
+								"type": "Expression"
+							},
+							"dataset": {
+								"value": "@pipeline().parameters.dataset",
+								"type": "Expression"
+							},
+							"datadate": {
+								"value": "@pipeline().parameters.filter_path",
+								"type": "Expression"
+							}
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "SynapseCopyGobSink",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_serverName": {
+								"value": "@variables('dw_name')",
+								"type": "Expression"
+							},
+							"p_dbName": {
+								"value": "@variables('db_name')",
+								"type": "Expression"
+							},
+							"p_schema": {
+								"value": "@variables('dw_schema_name')",
+								"type": "Expression"
+							},
+							"p_tableName": {
+								"value": "@pipeline().parameters.output_dataset",
+								"type": "Expression"
+							},
+							"p_db_conn_string": {
+								"value": "@concat('dba-conn-string-', pipeline().parameters.business_unit)",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "CopyWithColumns",
+				"type": "Copy",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "ParquetSource",
+						"additionalColumns": [
+							{
+								"name": "load_data_date",
+								"value": {
+									"value": "@pipeline().parameters.datadate",
+									"type": "Expression"
+								}
+							}
+						],
+						"storeSettings": {
+							"type": "AzureDataLakeStoreReadSettings",
+							"recursive": true,
+							"wildcardFolderPath": {
+								"value": "@concat(pipeline().parameters.layer,'/',pipeline().parameters.source_type,'/',pipeline().parameters.app,'/',pipeline().parameters.region,'/',pipeline().parameters.dataset, '/', pipeline().parameters.filter_path, '*')",
+								"type": "Expression"
+							},
+							"wildcardFileName": "*.parquet"
+						}
+					},
+					"sink": {
+						"type": "ParquetSink",
+						"storeSettings": {
+							"type": "AzureDataLakeStoreWriteSettings"
+						},
+						"formatSettings": {
+							"type": "ParquetWriteSettings"
+						}
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "DataLakeParquetCopyPeriodicallySource",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_dl_name": {
+								"value": "@pipeline().parameters.p_dl_name",
+								"type": "Expression"
+							},
+							"layer": {
+								"value": "@pipeline().parameters.layer",
+								"type": "Expression"
+							},
+							"app": {
+								"value": "@pipeline().parameters.app",
+								"type": "Expression"
+							},
+							"region": {
+								"value": "@pipeline().parameters.region",
+								"type": "Expression"
+							},
+							"dataset": {
+								"value": "@pipeline().parameters.dataset",
+								"type": "Expression"
+							},
+							"datadate": {
+								"value": "@pipeline().parameters.filter_path",
+								"type": "Expression"
+							},
+							"source_type": {
+								"value": "@pipeline().parameters.source_type",
+								"type": "Expression"
+							}
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "DataLakeParquetCopyPeriodicallySink",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_dl_name": {
+								"value": "@pipeline().parameters.p_dl_name",
+								"type": "Expression"
+							},
+							"layer": {
+								"value": "@concat('processed/', pipeline().parameters.layer, '/', variables('tmp_dir'))",
+								"type": "Expression"
+							},
+							"app": {
+								"value": "@pipeline().parameters.app",
+								"type": "Expression"
+							},
+							"region": {
+								"value": "@pipeline().parameters.region",
+								"type": "Expression"
+							},
+							"dataset": {
+								"value": "@pipeline().parameters.dataset",
+								"type": "Expression"
+							},
+							"datadate": {
+								"value": "@pipeline().parameters.filter_path",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "DeleteColumnsFileDir",
+				"type": "Delete",
+				"dependsOn": [
+					{
+						"activity": "CopyFinal",
+						"dependencyConditions": [
+							"Succeeded",
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "DataLakeParquetCopyTempFolder",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_dl_name": {
+								"value": "@pipeline().parameters.p_dl_name",
+								"type": "Expression"
+							},
+							"layer": {
+								"value": "@concat('processed/', pipeline().parameters.layer)",
+								"type": "Expression"
+							},
+							"folder": {
+								"value": "@variables('tmp_dir')",
+								"type": "Expression"
+							}
+						}
+					},
+					"enableLogging": false,
+					"storeSettings": {
+						"type": "AzureDataLakeStoreReadSettings",
+						"recursive": true
+					}
+				}
+			}
+		],
+		"parameters": {
+			"business_unit": {
+				"type": "string"
+			},
+			"layer": {
+				"type": "string",
+				"defaultValue": "raw"
+			},
+			"app": {
+				"type": "string"
+			},
+			"region": {
+				"type": "string",
+				"defaultValue": "GLB"
+			},
+			"dataset": {
+				"type": "string"
+			},
+			"datadate": {
+				"type": "string"
+			},
+			"source_type": {
+				"type": "string"
+			},
+			"is_consolidated": {
+				"type": "bool",
+				"defaultValue": false
+			},
+			"p_dl_name": {
+				"type": "string"
+			},
+			"filter_path": {
+				"type": "string"
+			},
+			"output_dataset": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"dw_name": {
+				"type": "String",
+				"defaultValue": "@{concat(replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), 'datdw')}"
+			},
+			"db_name": {
+				"type": "String",
+				"defaultValue": "@{concat(replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), pipeline().parameters.business_unit, 'dw')}"
+			},
+			"dw_schema_name": {
+				"type": "String",
+				"defaultValue": "@toLower(concat(pipeline().parameters.layer,'_',pipeline().parameters.region,'_',pipeline().parameters.app))"
+			},
+			"tmp_dir": {
+				"type": "String",
+				"defaultValue": "@concat('temp_' , pipeline().RunId)"
+			}
+		},
+		"folder": {
+			"name": "utils"
+		},
+		"annotations": []
+	}
+}

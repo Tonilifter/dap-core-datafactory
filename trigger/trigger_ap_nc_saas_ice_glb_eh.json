@@ -1,0 +1,36 @@
+{
+	"name": "trigger_ap_nc_saas_ice_glb_eh",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Started",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "IngestionStreamingPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "AP_NC_SAAS_ICE",
+					"region": "GLB"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2020-01-08T10:42:00Z",
+				"timeZone": "UTC",
+				"schedule": {
+					"minutes": [
+						10
+					],
+					"hours": [
+						23
+					]
+				}
+			}
+		}
+	}
+}

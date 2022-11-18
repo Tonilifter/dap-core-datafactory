@@ -1,0 +1,52 @@
+{
+	"name": "DatalakeGen2SinkFolderDataset",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "AzureDataLakeStorageGen2",
+			"type": "LinkedServiceReference",
+			"parameters": {
+				"storageAccount": {
+					"value": "@dataset().storageAccount",
+					"type": "Expression"
+				},
+				"servicePrincipal": {
+					"value": "@dataset().servicePrincipal",
+					"type": "Expression"
+				}
+			}
+		},
+		"parameters": {
+			"container": {
+				"type": "string"
+			},
+			"storageAccount": {
+				"type": "string"
+			},
+			"servicePrincipal": {
+				"type": "string"
+			},
+			"folder": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "Gen2"
+		},
+		"annotations": [],
+		"type": "Binary",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"folderPath": {
+					"value": "@dataset().folder",
+					"type": "Expression"
+				},
+				"fileSystem": {
+					"value": "@dataset().container",
+					"type": "Expression"
+				}
+			}
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

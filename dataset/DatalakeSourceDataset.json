@@ -1,0 +1,42 @@
+{
+	"name": "DatalakeSourceDataset",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "AzureDataLakeStoreLS",
+			"type": "LinkedServiceReference",
+			"parameters": {
+				"datalakeName": {
+					"value": "@dataset().datalakeName",
+					"type": "Expression"
+				},
+				"servicePrincipal": {
+					"value": "@dataset().servicePrincipal",
+					"type": "Expression"
+				}
+			}
+		},
+		"parameters": {
+			"datalakeName": {
+				"type": "string"
+			},
+			"root_folder": {
+				"type": "string"
+			},
+			"servicePrincipal": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"type": "Binary",
+		"typeProperties": {
+			"location": {
+				"type": "AzureDataLakeStoreLocation",
+				"folderPath": {
+					"value": "@dataset().root_folder",
+					"type": "Expression"
+				}
+			}
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

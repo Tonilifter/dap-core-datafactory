@@ -1,0 +1,40 @@
+{
+	"name": "trigger_ap_ref_estructuras_produccion_esp_sql_syspes",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "SQLServerPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "AP_REF_ESTRUCTURAS_PRODUCCION",
+					"region": "ESP",
+					"is_interval": false,
+					"sourceType": "db",
+					"mock": "false",
+					"package": "SYSPES API INDUSTRIAL"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2021-11-25T01:00:00",
+				"timeZone": "Romance Standard Time",
+				"schedule": {
+					"minutes": [
+						0
+					],
+					"hours": [
+						3
+					]
+				}
+			}
+		}
+	}
+}

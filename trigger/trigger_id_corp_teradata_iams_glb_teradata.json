@@ -1,0 +1,28 @@
+{
+	"name": "trigger_id_corp_teradata_iams_glb_teradata",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Started",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "TeradataPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "ID_CORP_TERADATA_IAMS",
+					"region": "GLB"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2020-01-24T05:30:00Z",
+				"timeZone": "UTC"
+			}
+		}
+	}
+}

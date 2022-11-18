@@ -1,0 +1,723 @@
+{
+	"name": "DataboxPipeline",
+	"properties": {
+		"activities": [
+			{
+				"name": "OperationaLogStart",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "OperationalLogPipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": false,
+					"parameters": {
+						"nivel": "INFO",
+						"modulo": "DATABOX",
+						"pipelineName": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"logType": "START",
+						"applicationName": {
+							"value": "@pipeline().parameters.appName",
+							"type": "Expression"
+						},
+						"datasetName": {
+							"value": "@pipeline().parameters.datasetInput",
+							"type": "Expression"
+						},
+						"region": {
+							"value": "@pipeline().parameters.region",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "HttpToken",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "Set appIdToken",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Set appSecretToken",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": true,
+					"secureInput": true
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": "https://login.microsoftonline.com/0a25214f-ee52-483c-b96b-dc79f3227a6f/oauth2/v2.0/token",
+					"method": "POST",
+					"headers": {
+						"Content-Type": "application/x-www-form-urlencoded"
+					},
+					"body": {
+						"value": "@concat('client_id=', variables('appIdToken'), '&client_secret=',  encodeUriComponent(variables('appSecretToken')), '&grant_type=client_credentials&scope=https://graph.microsoft.com/.default')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set appIdToken",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "GetAppIdToken",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "appIdToken",
+					"value": {
+						"value": "@activity('GetAppIdToken').output.value",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "GetAppIdToken",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "OperationaLogStart",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": true,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@concat('https://', replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), 'corekv.vault.azure.net/secrets/adapp-extract-id?api-version=7.0')",
+						"type": "Expression"
+					},
+					"connectVia": {
+						"referenceName": "IntegrationRuntimeFreezer",
+						"type": "IntegrationRuntimeReference"
+					},
+					"method": "GET",
+					"authentication": {
+						"type": "MSI",
+						"resource": "https://vault.azure.net"
+					}
+				}
+			},
+			{
+				"name": "GetAppSecretToken",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "OperationaLogStart",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": true,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@concat('https://', replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), 'corekv.vault.azure.net/secrets/adsp-extract-secret?api-version=7.0')",
+						"type": "Expression"
+					},
+					"connectVia": {
+						"referenceName": "IntegrationRuntimeFreezer",
+						"type": "IntegrationRuntimeReference"
+					},
+					"method": "GET",
+					"authentication": {
+						"type": "MSI",
+						"resource": "https://vault.azure.net"
+					}
+				}
+			},
+			{
+				"name": "Set appSecretToken",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "GetAppSecretToken",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "appSecretToken",
+					"value": {
+						"value": "@activity('GetAppSecretToken').output.value",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set httpToken",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "HttpToken",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "httpToken",
+					"value": {
+						"value": "@activity('HttpToken').output.access_token",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "OperationaLogErrorGetMetadata",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Set outputGob",
+						"dependencyConditions": [
+							"Failed"
+						]
+					},
+					{
+						"activity": "GetGovernanceMetadata",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "OperationalLogPipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"nivel": "ERROR",
+						"modulo": "DATABOX",
+						"pipelineName": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"logType": "END",
+						"applicationName": {
+							"value": "@pipeline().parameters.appName",
+							"type": "Expression"
+						},
+						"region": {
+							"value": "@pipeline().parameters.region",
+							"type": "Expression"
+						},
+						"message": {
+							"value": "@concat('GetGovernanceMetadata: ', activity('GetGovernanceMetadata').error.message)",
+							"type": "Expression"
+						},
+						"sourceType": {
+							"value": "@pipeline().parameters.sourceType",
+							"type": "Expression"
+						},
+						"uid": {
+							"value": "@variables('uid')",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "GetGovernanceMetadata",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "If Condition1",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": true
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@concat('https://coreutils', replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), 'akcore.cloudapp.repsol.com/dap-core-extraction-utils/governance-dataset-detail')",
+						"type": "Expression"
+					},
+					"method": "GET",
+					"headers": {
+						"applicationName": {
+							"value": "@variables('applicationNamecalc')",
+							"type": "Expression"
+						},
+						"region": {
+							"value": "@variables('regioncalc')",
+							"type": "Expression"
+						},
+						"datasetName": {
+							"value": "@pipeline().parameters.datasetInput",
+							"type": "Expression"
+						},
+						"Authorization": {
+							"value": "@concat('Bearer ', variables('httpToken'))",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "databox",
+				"type": "DatabricksSparkJar",
+				"dependsOn": [
+					{
+						"activity": "Set outputGob",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"mainClassName": "com.repsol.datalake.databox.DataboxJob",
+					"parameters": [
+						"-i",
+						"@concat(pipeline().parameters.adlInput, '.azuredatalakestore.net')",
+						"-o",
+						"@concat(pipeline().parameters.adlOutput, '.azuredatalakestore.net')",
+						"-a",
+						"@pipeline().parameters.containerInput",
+						"-b",
+						"@pipeline().parameters.containerOutput",
+						"-c",
+						"@pipeline().parameters.sourceType",
+						"-d",
+						"@{if(empty(pipeline().parameters.appName),' ',pipeline().parameters.appName)}\n\n",
+						"-e",
+						"@{if(empty(pipeline().parameters.region),' ',pipeline().parameters.region)}",
+						"-f",
+						"@pipeline().parameters.datasetInput",
+						"-g",
+						"@pipeline().parameters.datasetOutput",
+						"-h",
+						"@{if(empty(pipeline().parameters.partition),' ',pipeline().parameters.partition)}\n\n",
+						"-j",
+						"@variables('outputGob')",
+						"-p",
+						"N/A",
+						"-u",
+						"@variables('uid')"
+					],
+					"libraries": [
+						{
+							"jar": "dbfs:/FileStore/job-jars-ci/databox-jar-with-dependencies.jar"
+						}
+					]
+				},
+				"linkedServiceName": {
+					"referenceName": "AzureDatabricksDynamicLinkedService",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"workers": "2:8",
+						"token": "dbbox-token",
+						"clusterVersion": "6.4.x-esr-scala2.11"
+					}
+				}
+			},
+			{
+				"name": "OperationaLogErrorCopyDataEnd",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "databox",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "OperationalLogPipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"nivel": "ERROR",
+						"modulo": "DATABOX",
+						"pipelineName": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"logType": "END",
+						"applicationName": {
+							"value": "@pipeline().parameters.appName",
+							"type": "Expression"
+						},
+						"dataDate": {
+							"value": "@utcnow()",
+							"type": "Expression"
+						},
+						"datasetName": {
+							"value": "@pipeline().parameters.datasetOutput",
+							"type": "Expression"
+						},
+						"region": {
+							"value": "@pipeline().parameters.region",
+							"type": "Expression"
+						},
+						"message": {
+							"value": "@concat('databox: ', activity('databox').error.message)",
+							"type": "Expression"
+						},
+						"sourceType": {
+							"value": "@pipeline().parameters.sourceType",
+							"type": "Expression"
+						},
+						"uid": {
+							"value": "@variables('uid')",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "Set outputGob",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "GetGovernanceMetadata",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "outputGob",
+					"value": {
+						"value": "@string(activity('GetGovernanceMetadata').output)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "OperationaLogEnd",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "databox",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "OperationalLogPipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": false,
+					"parameters": {
+						"nivel": "INFO",
+						"modulo": "Databox",
+						"pipelineName": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"logType": "END",
+						"applicationName": {
+							"value": "@pipeline().parameters.appName",
+							"type": "Expression"
+						},
+						"dataDate": {
+							"value": "@utcnow()",
+							"type": "Expression"
+						},
+						"region": {
+							"value": "@pipeline().parameters.region",
+							"type": "Expression"
+						},
+						"sourceType": {
+							"value": "@pipeline().parameters.sourceType",
+							"type": "Expression"
+						},
+						"uid": {
+							"value": "@variables('uid')",
+							"type": "Expression"
+						},
+						"datasetIn": {
+							"value": "@pipeline().parameters.datasetInput",
+							"type": "Expression"
+						},
+						"datasetOut": {
+							"value": "@pipeline().parameters.datasetOutput",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "If Condition1",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Set httpToken",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@or(empty(pipeline().parameters.appName),empty(pipeline().parameters.region))",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "Set region_param",
+							"type": "SetVariable",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "regioncalc",
+								"value": {
+									"value": "@pipeline().parameters.region",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Set appName_param",
+							"type": "SetVariable",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "applicationNamecalc",
+								"value": {
+									"value": "@pipeline().parameters.appName",
+									"type": "Expression"
+								}
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "GetGovernanceDataset_Region_App",
+							"type": "WebActivity",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": true
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"url": {
+									"value": "@concat('https://coreutils', replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), 'akcore.cloudapp.repsol.com/dap-core-extraction-utils/governance-app-region')",
+									"type": "Expression"
+								},
+								"method": "GET",
+								"headers": {
+									"filter": {
+										"value": "@pipeline().parameters.datasetInput",
+										"type": "Expression"
+									},
+									"Authorization": {
+										"value": "@concat('Bearer ', variables('httpToken'))",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "Set region",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "Set Json",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "regioncalc",
+								"value": {
+									"value": "@variables('outDs')[0].regionCode.value",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Set appName",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "Set Json",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "applicationNamecalc",
+								"value": {
+									"value": "@variables('outDs')[0].dataPackageSourceAppId.application.applicationCode",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Set Json",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "GetGovernanceDataset_Region_App",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "outDs",
+								"value": {
+									"value": "@json(activity('GetGovernanceDataset_Region_App').output.Response)",
+									"type": "Expression"
+								}
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"adlInput": {
+				"type": "string",
+				"defaultValue": "adl://daplatform0101lcomdapdls.azuredatalakestore.net"
+			},
+			"adlOutput": {
+				"type": "string",
+				"defaultValue": "adl://daplatform0101lcomdapdls.azuredatalakestore.net"
+			},
+			"containerInput": {
+				"type": "string",
+				"defaultValue": "staging"
+			},
+			"containerOutput": {
+				"type": "string",
+				"defaultValue": "staging"
+			},
+			"appName": {
+				"type": "string",
+				"defaultValue": "GARSOURCE_CODE"
+			},
+			"partition": {
+				"type": "string",
+				"defaultValue": "year=2021/month=04/day=19"
+			},
+			"sourceType": {
+				"type": "string",
+				"defaultValue": "file"
+			},
+			"region": {
+				"type": "string",
+				"defaultValue": "GLB"
+			},
+			"datasetInput": {
+				"type": "string",
+				"defaultValue": "dataset_gar11"
+			},
+			"datasetOutput": {
+				"type": "string",
+				"defaultValue": "dataset_gar11_output"
+			},
+			"workers": {
+				"type": "string",
+				"defaultValue": "2:8"
+			}
+		},
+		"variables": {
+			"outputGob": {
+				"type": "String"
+			},
+			"appIdToken": {
+				"type": "String"
+			},
+			"appSecretToken": {
+				"type": "String"
+			},
+			"httpToken": {
+				"type": "String"
+			},
+			"uid": {
+				"type": "String",
+				"defaultValue": "@concat('DATABOX#$', pipeline().parameters.appName, '$_', pipeline().parameters.region, '#', utcnow('yyyy/MM/dd'), '#', utcnow('yyyyMMddHHmmssfff'))"
+			},
+			"applicationNamecalc": {
+				"type": "String"
+			},
+			"regioncalc": {
+				"type": "String"
+			},
+			"outDs": {
+				"type": "Array"
+			}
+		},
+		"folder": {
+			"name": "utils"
+		},
+		"annotations": []
+	}
+}

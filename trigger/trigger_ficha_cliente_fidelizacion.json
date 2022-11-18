@@ -1,0 +1,40 @@
+{
+	"name": "trigger_ficha_cliente_fidelizacion",
+	"properties": {
+		"description": "Trigger para realizar la extracción diaria de Salesforce para los datasets de ficha cliente (Fidelización Global)",
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "SalesforcePipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "PR_FIDELIZACION",
+					"region": "GLB",
+					"is_interval": false,
+					"mock": "false",
+					"package": "FIDELIZACION_SF_FICHA_CLIENTE"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2021-07-05T12:34:00",
+				"timeZone": "Romance Standard Time",
+				"schedule": {
+					"minutes": [
+						0
+					],
+					"hours": [
+						4
+					]
+				}
+			}
+		}
+	}
+}

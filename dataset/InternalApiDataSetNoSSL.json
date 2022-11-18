@@ -1,0 +1,44 @@
+{
+	"name": "InternalApiDataSetNoSSL",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "HttpInternalBasicNoSSLLinkedService",
+			"type": "LinkedServiceReference",
+			"parameters": {
+				"url": {
+					"value": "@dataset().url",
+					"type": "Expression"
+				},
+				"user_name": {
+					"value": "@dataset().username",
+					"type": "Expression"
+				},
+				"secret_name": {
+					"value": "@dataset().secret_name",
+					"type": "Expression"
+				}
+			}
+		},
+		"parameters": {
+			"url": {
+				"type": "string"
+			},
+			"username": {
+				"type": "string"
+			},
+			"secret_name": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "extraction/apis"
+		},
+		"annotations": [],
+		"type": "Binary",
+		"typeProperties": {
+			"location": {
+				"type": "HttpServerLocation"
+			}
+		}
+	}
+}

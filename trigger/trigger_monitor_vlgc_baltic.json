@@ -1,0 +1,40 @@
+{
+	"name": "trigger_monitor_vlgc_baltic",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "MonitorPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"monitorId": "$PR_VLGC$_GLB_Baltic",
+					"laQuery": "adfOperationLogs('predicciones_arbitraje','IngestionFileReceiverPipeline','','staging/external/EA_CORP_TFS/GLB/predicciones_arbitraje/predicciones_arbitraje','')\n| union adfOperationLogs('predicciones_exportaciones','IngestionFileReceiverPipeline','','staging/external/PS_CORP_EIA/GLB/predicciones_exportaciones/predicciones_exportaciones','')\n| union adfOperationLogs('TCE_Historical','IngestionFileReceiverPipeline','','staging/external/EA_TRAD_CME/GLB/TCE_Historical/TCE_Historical','')\n| union adfOperationLogs('predicted_position_list','IngestionFileReceiverPipeline','','staging/external/AM_TRAD_VLGC_TCE/GLB/predicted_position_list/predicted_position_list','')\n| invoke SummarizeADF()\n| invoke MonitorSummarize()",
+					"timespan": "PT24H"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Week",
+				"interval": 1,
+				"startTime": "2022-01-03T12:31:00",
+				"timeZone": "Romance Standard Time",
+				"schedule": {
+					"minutes": [
+						0
+					],
+					"hours": [
+						17
+					],
+					"weekDays": [
+						"Thursday"
+					]
+				}
+			}
+		}
+	}
+}

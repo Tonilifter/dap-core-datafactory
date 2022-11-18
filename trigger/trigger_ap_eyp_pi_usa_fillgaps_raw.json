@@ -1,0 +1,31 @@
+{
+	"name": "trigger_ap_eyp_pi_usa_fillgaps_raw",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "PISystemFillGapsPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "AP_EYP_PI_NARU",
+					"region": "USA",
+					"piServer": "USHOU1WPAPP024",
+					"mode": "raw",
+					"interval": "5m"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Minute",
+				"interval": 25,
+				"startTime": "2021-12-21T10:00:00Z",
+				"timeZone": "UTC"
+			}
+		}
+	}
+}

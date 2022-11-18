@@ -1,0 +1,67 @@
+{
+	"name": "ExternatSFTPGZIPFolderDataset",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "ExternalSFTPLinkedService",
+			"type": "LinkedServiceReference",
+			"parameters": {
+				"host": "@dataset().host",
+				"port": "@dataset().port",
+				"user": "@dataset().user",
+				"secret_name": "@dataset().secret_name"
+			}
+		},
+		"parameters": {
+			"folder": {
+				"type": "String"
+			},
+			"host": {
+				"type": "String"
+			},
+			"port": {
+				"type": "Int",
+				"defaultValue": 22
+			},
+			"secret_name": {
+				"type": "String"
+			},
+			"fileName": {
+				"type": "String"
+			},
+			"user": {
+				"type": "String"
+			},
+			"delimiter": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "extraction/files"
+		},
+		"annotations": [],
+		"type": "FileShare",
+		"typeProperties": {
+			"format": {
+				"type": "TextFormat",
+				"columnDelimiter": {
+					"value": "@dataset().delimiter",
+					"type": "Expression"
+				},
+				"treatEmptyAsNull": true,
+				"firstRowAsHeader": true
+			},
+			"compression": {
+				"type": "GZip"
+			},
+			"fileName": {
+				"value": "@dataset().fileName",
+				"type": "Expression"
+			},
+			"folderPath": {
+				"value": "@dataset().folder",
+				"type": "Expression"
+			}
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

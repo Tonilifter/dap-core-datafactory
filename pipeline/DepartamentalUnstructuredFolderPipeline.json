@@ -1,0 +1,1013 @@
+{
+	"name": "DepartamentalUnstructuredFolderPipeline",
+	"properties": {
+		"activities": [
+			{
+				"name": "GetMetadata",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "OperationaLogStart",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlSource",
+						"sqlReaderQuery": {
+							"value": "SELECT *,\nconvert(varchar, DATEADD(day, - COALESCE(days_to_extract, 0), cast('@{variables('referenceDate')}' as datetimeoffset)), 111) as extraction_date, format(getdate(), 'yyyyMMddHHmmss') as ts \nFROM dbo.files WHERE application_name = '@{pipeline().parameters.applicationName}' \nand region = '@{pipeline().parameters.region}' and structured = 0 and package_name = '@{pipeline().parameters.package}'",
+							"type": "Expression"
+						},
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "AzureSqlDataset",
+						"type": "DatasetReference",
+						"parameters": {
+							"tableName": "dbo.files",
+							"secretName": "db-metadata-secret"
+						}
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "IterateOverAllTables",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "GetMetadata",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('GetMetadata').output.value",
+						"type": "Expression"
+					},
+					"isSequential": false,
+					"batchCount": 10,
+					"activities": [
+						{
+							"name": "OperationaLogIterateStart",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "OperationalLogPipeline",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": false,
+								"parameters": {
+									"nivel": "INFO",
+									"modulo": "EXTRACTION_DEPARTAMENTAL_UNSTRUCTURED",
+									"pipelineName": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"logType": "INFO",
+									"applicationName": {
+										"value": "@pipeline().parameters.applicationName",
+										"type": "Expression"
+									},
+									"dataDate": {
+										"value": "@variables('referenceDate')",
+										"type": "Expression"
+									},
+									"datasetName": {
+										"value": "@item().dataset_name",
+										"type": "Expression"
+									},
+									"region": {
+										"value": "@pipeline().parameters.region",
+										"type": "Expression"
+									},
+									"message": {
+										"value": "@concat('Starting copy process for dataset: ', item().dataset_name)",
+										"type": "Expression"
+									},
+									"sourceType": {
+										"value": "@pipeline().parameters.sourceType",
+										"type": "Expression"
+									},
+									"uid": {
+										"value": "@variables('uid')",
+										"type": "Expression"
+									},
+									"parentUid": {
+										"value": "@trim('')",
+										"type": "Expression"
+									},
+									"datasetIn": {
+										"value": "@trim('')",
+										"type": "Expression"
+									},
+									"datasetOut": {
+										"value": "@trim('')",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "CopyData",
+							"type": "Copy",
+							"dependsOn": [
+								{
+									"activity": "OperationaLogIterateStart",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "BinarySource",
+									"storeSettings": {
+										"type": "FileServerReadSettings",
+										"maxConcurrentConnections": 2,
+										"recursive": true
+									},
+									"formatSettings": {
+										"type": "BinaryReadSettings"
+									}
+								},
+								"sink": {
+									"type": "AzureDataLakeStoreSink"
+								},
+								"enableStaging": false,
+								"enableSkipIncompatibleRow": false
+							},
+							"inputs": [
+								{
+									"referenceName": "DepartamentalBinaryFileServerDataset",
+									"type": "DatasetReference",
+									"parameters": {
+										"folder": "@{item().folder}",
+										"host": "@{item().host}",
+										"userid": "@{item().user_name}",
+										"secret_name": "@{item().secret_name}"
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "DataLakeUnstructured",
+									"type": "DatasetReference",
+									"parameters": {
+										"p_folder_path": "@{concat('raw', '/file/', pipeline().parameters.applicationName, '/', pipeline().parameters.region, '/', item().dataset_name, '/', item().extraction_date)}",
+										"p_file_name": "*",
+										"p_dl_name": "@{concat(replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), activity('GetMetadata').output.value[0].business_unit, 'dapdls')}"
+									}
+								}
+							]
+						},
+						{
+							"name": "OperationaLogErrorCopyData",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "CopyData",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "OperationalLogPipeline",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"nivel": "ERROR",
+									"modulo": "EXTRACTION_DEPARTAMENTAL_UNSTRUCTURED",
+									"pipelineName": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"logType": "ERROR",
+									"applicationName": {
+										"value": "@pipeline().parameters.applicationName",
+										"type": "Expression"
+									},
+									"dataDate": {
+										"value": "@variables('referenceDate')",
+										"type": "Expression"
+									},
+									"datasetName": {
+										"value": "@item().dataset_name",
+										"type": "Expression"
+									},
+									"region": {
+										"value": "@pipeline().parameters.region",
+										"type": "Expression"
+									},
+									"message": {
+										"value": "@concat('CopyData: ', activity('CopyData').error.message)",
+										"type": "Expression"
+									},
+									"sourceType": {
+										"value": "@pipeline().parameters.sourceType",
+										"type": "Expression"
+									},
+									"uid": {
+										"value": "@variables('uid')",
+										"type": "Expression"
+									},
+									"parentUid": {
+										"value": "@trim('')",
+										"type": "Expression"
+									},
+									"datasetIn": {
+										"value": "@trim('')",
+										"type": "Expression"
+									},
+									"datasetOut": {
+										"value": "@trim('')",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "Append DatasetIn",
+							"type": "AppendVariable",
+							"dependsOn": [
+								{
+									"activity": "CopyData",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "datasetIn",
+								"value": {
+									"value": "@concat('{\"NAME\":\"', item().dataset_name, '\",\"PATH\":\"', item().host, item().folder, '\",\"NUM_ITEMS\":\"', activity('CopyData').output.dataRead,'\"}')",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Append DatasetOut",
+							"type": "AppendVariable",
+							"dependsOn": [
+								{
+									"activity": "CopyData",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "datasetOut",
+								"value": {
+									"value": "@concat('{\"NAME\":\"', item().dataset_name, '\",\"PATH\":\"adl://', replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), item().business_unit, 'dapdls.azuredatalakestore.net/raw/file/', item().application_name, '/', item().region, '/', item().dataset_name, '/', item().extraction_date, '/','\",\"NUM_ITEMS\":\"', activity('CopyData').output.dataWritten,'\"}')",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "OperationaLogIterateEnd",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "CopyData",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "OperationalLogPipeline",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": false,
+								"parameters": {
+									"nivel": "INFO",
+									"modulo": "EXTRACTION_DEPARTAMENTAL_UNSTRUCTURED",
+									"pipelineName": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"logType": "INFO",
+									"applicationName": {
+										"value": "@pipeline().parameters.applicationName",
+										"type": "Expression"
+									},
+									"dataDate": {
+										"value": "@variables('referenceDate')",
+										"type": "Expression"
+									},
+									"datasetName": {
+										"value": "@item().dataset_name",
+										"type": "Expression"
+									},
+									"region": {
+										"value": "@pipeline().parameters.region",
+										"type": "Expression"
+									},
+									"message": {
+										"value": "@concat('Finshed copy process for dataset: ', item().dataset_name)",
+										"type": "Expression"
+									},
+									"sourceType": {
+										"value": "@pipeline().parameters.sourceType",
+										"type": "Expression"
+									},
+									"uid": {
+										"value": "@variables('uid')",
+										"type": "Expression"
+									},
+									"parentUid": {
+										"value": "@trim('')",
+										"type": "Expression"
+									},
+									"datasetIn": {
+										"value": "@trim('')",
+										"type": "Expression"
+									},
+									"datasetOut": {
+										"value": "@trim('')",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "OperationaLogStart",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "OperationalLogPipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": false,
+					"parameters": {
+						"nivel": "INFO",
+						"modulo": "EXTRACTION_DEPARTAMENTAL_UNSTRUCTURED",
+						"pipelineName": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"logType": "START",
+						"applicationName": {
+							"value": "@pipeline().parameters.applicationName",
+							"type": "Expression"
+						},
+						"dataDate": {
+							"value": "@variables('referenceDate')",
+							"type": "Expression"
+						},
+						"region": {
+							"value": "@pipeline().parameters.region",
+							"type": "Expression"
+						},
+						"sourceType": {
+							"value": "@pipeline().parameters.sourceType",
+							"type": "Expression"
+						},
+						"uid": {
+							"value": "@variables('uid')",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "OperationaLogErrorGetMetada",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "GetMetadata",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "OperationalLogPipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"nivel": "ERROR",
+						"modulo": "EXTRACTION_DEPARTAMENTAL_UNSTRUCTURED",
+						"pipelineName": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"logType": "END",
+						"applicationName": {
+							"value": "@pipeline().parameters.applicationName",
+							"type": "Expression"
+						},
+						"dataDate": {
+							"value": "@variables('referenceDate')",
+							"type": "Expression"
+						},
+						"region": {
+							"value": "@pipeline().parameters.region",
+							"type": "Expression"
+						},
+						"message": {
+							"value": "@concat('GetMetadata: ', activity('GetMetadata').error.message)",
+							"type": "Expression"
+						},
+						"sourceType": {
+							"value": "@pipeline().parameters.sourceType",
+							"type": "Expression"
+						},
+						"uid": {
+							"value": "@variables('uid')",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "ExecuteProcessorPipeline",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "IterateOverAllTables",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "ProcessorPipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"applicationName": {
+							"value": "@pipeline().parameters.applicationName",
+							"type": "Expression"
+						},
+						"region": {
+							"value": "@pipeline().parameters.region",
+							"type": "Expression"
+						},
+						"extractionDate": {
+							"value": "@activity('GetMetadata').output.value[0].extraction_date",
+							"type": "Expression"
+						},
+						"parentUid": {
+							"value": "@variables('uid')",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "OperationaLogEnd",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "IterateOverAllTables",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "OperationalLogPipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": false,
+					"parameters": {
+						"nivel": "INFO",
+						"modulo": "EXTRACTION_DEPARTAMENTAL_UNSTRUCTURED",
+						"pipelineName": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"logType": "END",
+						"applicationName": {
+							"value": "@pipeline().parameters.applicationName",
+							"type": "Expression"
+						},
+						"dataDate": {
+							"value": "@variables('referenceDate')",
+							"type": "Expression"
+						},
+						"region": {
+							"value": "@pipeline().parameters.region",
+							"type": "Expression"
+						},
+						"sourceType": {
+							"value": "@pipeline().parameters.sourceType",
+							"type": "Expression"
+						},
+						"uid": {
+							"value": "@variables('uid')",
+							"type": "Expression"
+						},
+						"datasetIn": {
+							"value": "@variables('datasetIn')",
+							"type": "Expression"
+						},
+						"datasetOut": {
+							"value": "@variables('datasetOut')",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "IterateOverAllTables_Deletion",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "ExecuteProcessorPipeline",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('GetMetadata').output.value",
+						"type": "Expression"
+					},
+					"isSequential": false,
+					"batchCount": 10,
+					"activities": [
+						{
+							"name": "OperationaLogIterateStartSourceDeletion",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "OperationalLogPipeline",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"nivel": "INFO",
+									"modulo": {
+										"value": "EXTRACTION_DEPARTAMENTAL_UNSTRUCTURED",
+										"type": "Expression"
+									},
+									"pipelineName": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"logType": "INFO",
+									"applicationName": {
+										"value": "@pipeline().parameters.applicationName",
+										"type": "Expression"
+									},
+									"dataDate": {
+										"value": "@variables('referenceDate')",
+										"type": "Expression"
+									},
+									"datasetName": {
+										"value": "@item().dataset_name",
+										"type": "Expression"
+									},
+									"region": {
+										"value": "@pipeline().parameters.region",
+										"type": "Expression"
+									},
+									"message": {
+										"value": "@concat('Starting deletion of source files for: ', item().dataset_name)",
+										"type": "Expression"
+									},
+									"sourceType": {
+										"value": "@pipeline().parameters.sourceType",
+										"type": "Expression"
+									},
+									"uid": {
+										"value": "@trim('')",
+										"type": "Expression"
+									},
+									"parentUid": {
+										"value": "@trim('')",
+										"type": "Expression"
+									},
+									"datasetIn": {
+										"value": "@trim('')",
+										"type": "Expression"
+									},
+									"datasetOut": {
+										"value": "@trim('')",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "OperationaLogIterateEndSourceDeletion",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "If Condition Delete_Source",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "OperationalLogPipeline",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"nivel": "INFO",
+									"modulo": {
+										"value": "EXTRACTION_DEPARTAMENTAL_UNSTRUCTURED",
+										"type": "Expression"
+									},
+									"pipelineName": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"logType": "END",
+									"applicationName": {
+										"value": "@pipeline().parameters.applicationName",
+										"type": "Expression"
+									},
+									"dataDate": {
+										"value": "@variables('referenceDate')",
+										"type": "Expression"
+									},
+									"datasetName": {
+										"value": "@item().dataset_name",
+										"type": "Expression"
+									},
+									"region": {
+										"value": "@pipeline().parameters.region",
+										"type": "Expression"
+									},
+									"message": {
+										"value": "@concat('End Deletion of source file for dataset: ', item().dataset_name)",
+										"type": "Expression"
+									},
+									"sourceType": {
+										"value": "@pipeline().parameters.sourceType",
+										"type": "Expression"
+									},
+									"uid": {
+										"value": "@variables('uid')",
+										"type": "Expression"
+									},
+									"parentUid": {
+										"value": "@trim('')",
+										"type": "Expression"
+									},
+									"datasetIn": {
+										"value": "@trim('')",
+										"type": "Expression"
+									},
+									"datasetOut": {
+										"value": "@trim('')",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "If Condition Delete_Source",
+							"type": "IfCondition",
+							"dependsOn": [
+								{
+									"activity": "OperationaLogIterateStartSourceDeletion",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@and(bool(item().delete_source),not(empty(item().file_type)))",
+									"type": "Expression"
+								},
+								"ifTrueActivities": [
+									{
+										"name": "OperationaLogErrorDeleteSourceFile",
+										"type": "ExecutePipeline",
+										"dependsOn": [
+											{
+												"activity": "DeleteSourceFile",
+												"dependencyConditions": [
+													"Failed"
+												]
+											}
+										],
+										"userProperties": [],
+										"typeProperties": {
+											"pipeline": {
+												"referenceName": "OperationalLogPipeline",
+												"type": "PipelineReference"
+											},
+											"waitOnCompletion": true,
+											"parameters": {
+												"nivel": "ERROR",
+												"modulo": {
+													"value": "EXTRACTION_DEPARTAMENTAL_UNSTRUCTURED",
+													"type": "Expression"
+												},
+												"pipelineName": {
+													"value": "@pipeline().Pipeline",
+													"type": "Expression"
+												},
+												"logType": "ERROR",
+												"applicationName": {
+													"value": "@pipeline().parameters.applicationName",
+													"type": "Expression"
+												},
+												"dataDate": {
+													"value": "@variables('referenceDate')",
+													"type": "Expression"
+												},
+												"datasetName": {
+													"value": "@item().dataset_name",
+													"type": "Expression"
+												},
+												"region": {
+													"value": "@pipeline().parameters.region",
+													"type": "Expression"
+												},
+												"message": {
+													"value": "@concat('DeleteSourceFile: ', activity('DeleteSourceFile').error.message)",
+													"type": "Expression"
+												},
+												"sourceType": {
+													"value": "@pipeline().parameters.sourceType",
+													"type": "Expression"
+												},
+												"uid": {
+													"value": "@trim('')",
+													"type": "Expression"
+												},
+												"parentUid": {
+													"value": "@trim('')",
+													"type": "Expression"
+												},
+												"datasetIn": {
+													"value": "@trim('')",
+													"type": "Expression"
+												},
+												"datasetOut": {
+													"value": "@trim('')",
+													"type": "Expression"
+												}
+											}
+										}
+									},
+									{
+										"name": "OperationaLogDeleteSourceFileEnd",
+										"type": "ExecutePipeline",
+										"dependsOn": [
+											{
+												"activity": "DeleteSourceFile",
+												"dependencyConditions": [
+													"Succeeded"
+												]
+											}
+										],
+										"userProperties": [],
+										"typeProperties": {
+											"pipeline": {
+												"referenceName": "OperationalLogPipeline",
+												"type": "PipelineReference"
+											},
+											"waitOnCompletion": true,
+											"parameters": {
+												"nivel": "INFO",
+												"modulo": {
+													"value": "EXTRACTION_DEPARTAMENTAL_UNSTRUCTURED",
+													"type": "Expression"
+												},
+												"pipelineName": {
+													"value": "@pipeline().Pipeline",
+													"type": "Expression"
+												},
+												"logType": "INFO",
+												"applicationName": {
+													"value": "@pipeline().parameters.applicationName",
+													"type": "Expression"
+												},
+												"dataDate": {
+													"value": "@variables('referenceDate')",
+													"type": "Expression"
+												},
+												"datasetName": {
+													"value": "@item().dataset_name",
+													"type": "Expression"
+												},
+												"region": {
+													"value": "@pipeline().parameters.region",
+													"type": "Expression"
+												},
+												"message": {
+													"value": "@concat('Finished file deletion: ', item().dataset_name,' , from folder ',item().folder)",
+													"type": "Expression"
+												},
+												"sourceType": {
+													"value": "@pipeline().parameters.sourceType",
+													"type": "Expression"
+												},
+												"uid": {
+													"value": "@variables('uid')",
+													"type": "Expression"
+												},
+												"parentUid": {
+													"value": "@trim('')",
+													"type": "Expression"
+												},
+												"datasetIn": {
+													"value": "@trim('')",
+													"type": "Expression"
+												},
+												"datasetOut": {
+													"value": "@trim('')",
+													"type": "Expression"
+												}
+											}
+										}
+									},
+									{
+										"name": "DeleteSourceFile",
+										"type": "Delete",
+										"dependsOn": [],
+										"policy": {
+											"timeout": "7.00:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"dataset": {
+												"referenceName": "DepartamentalBinaryFileServerDataset",
+												"type": "DatasetReference",
+												"parameters": {
+													"folder": "@{item().folder}",
+													"host": "@{item().host}",
+													"userid": "@{item().user_name}",
+													"secret_name": "@{item().secret_name}"
+												}
+											},
+											"enableLogging": false,
+											"storeSettings": {
+												"type": "FileServerReadSettings",
+												"recursive": false
+											}
+										}
+									}
+								]
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "OperationaLogErrorIterate",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "IterateOverAllTables",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "OperationalLogPipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"nivel": "ERROR",
+						"modulo": "EXTRACTION_DEPARTAMENTAL_UNSTRUCTURED",
+						"pipelineName": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"logType": "END",
+						"applicationName": {
+							"value": "@pipeline().parameters.applicationName",
+							"type": "Expression"
+						},
+						"dataDate": {
+							"value": "@variables('referenceDate')",
+							"type": "Expression"
+						},
+						"region": {
+							"value": "@pipeline().parameters.region",
+							"type": "Expression"
+						},
+						"message": {
+							"value": "@concat('IterateOverAllTables: ', activity('IterateOverAllTables').error.message)",
+							"type": "Expression"
+						},
+						"sourceType": {
+							"value": "@pipeline().parameters.sourceType",
+							"type": "Expression"
+						},
+						"uid": {
+							"value": "@variables('uid')",
+							"type": "Expression"
+						}
+					}
+				}
+			}
+		],
+		"parameters": {
+			"applicationName": {
+				"type": "String",
+				"defaultValue": "application_name"
+			},
+			"region": {
+				"type": "String",
+				"defaultValue": "ESP"
+			},
+			"referenceDate": {
+				"type": "string"
+			},
+			"sourceType": {
+				"type": "string",
+				"defaultValue": "file"
+			},
+			"parentUid": {
+				"type": "string"
+			},
+			"package": {
+				"type": "string",
+				"defaultValue": "*"
+			}
+		},
+		"variables": {
+			"referenceDate": {
+				"type": "String",
+				"defaultValue": "@if(empty(pipeline().parameters.referenceDate),utcnow('yyyy/MM/dd'),pipeline().parameters.referenceDate)"
+			},
+			"uid": {
+				"type": "String",
+				"defaultValue": "@if(equals(pipeline().parameters.package, '*'), concat('EXTRACTION_DEPARTAMENTAL_UNSTRUCTURED#$', pipeline().parameters.applicationName, '$_', pipeline().parameters.region, '#', if(empty(pipeline().parameters.referenceDate),utcnow('yyyy/MM/dd'),pipeline().parameters.referenceDate) , '#', utcnow('yyyyMMddHHmmssfff')), concat('EXTRACTION_DEPARTAMENTAL_UNSTRUCTURED#', pipeline().parameters.package, '_$', pipeline().parameters.applicationName, '$_', pipeline().parameters.region, '#', if(empty(pipeline().parameters.referenceDate),utcnow('yyyy/MM/dd'),pipeline().parameters.referenceDate) , '#', utcnow('yyyyMMddHHmmssfff')))"
+			},
+			"datasetIn": {
+				"type": "Array"
+			},
+			"datasetOut": {
+				"type": "Array"
+			}
+		},
+		"folder": {
+			"name": "extraction/files/unused_copy"
+		},
+		"annotations": []
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

@@ -1,0 +1,686 @@
+{
+	"name": "SalesforceCSVFormat",
+	"properties": {
+		"activities": [
+			{
+				"name": "HasPartitionColumn",
+				"type": "IfCondition",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@not(empty(pipeline().parameters.partition_column))",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "CopyFullData",
+							"type": "Copy",
+							"dependsOn": [
+								{
+									"activity": "OperationaLogIterateStartCopyFullData",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "SalesforceSource",
+									"query": {
+										"value": "select @{pipeline().parameters.columns} from @{pipeline().parameters.dataset_name} @{if(empty(pipeline().parameters.where_filter), '', concat('where ', pipeline().parameters.where_filter))}",
+										"type": "Expression"
+									},
+									"readBehavior": "query"
+								},
+								"sink": {
+									"type": "BlobSink",
+									"copyBehavior": "PreserveHierarchy"
+								},
+								"enableStaging": false
+							},
+							"inputs": [
+								{
+									"referenceName": "SalesforceDataset",
+									"type": "DatasetReference",
+									"parameters": {
+										"environmentUrl": {
+											"value": "@pipeline().parameters.kv_environment_url",
+											"type": "Expression"
+										},
+										"username": {
+											"value": "@pipeline().parameters.kv_username",
+											"type": "Expression"
+										},
+										"password": {
+											"value": "@pipeline().parameters.kv_password_secret",
+											"type": "Expression"
+										},
+										"securityToken": {
+											"value": "@pipeline().parameters.kv_security_token_secret",
+											"type": "Expression"
+										},
+										"apiVersion": {
+											"value": "@pipeline().parameters.api_version",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "BlobStorageDatasetLandingText",
+									"type": "DatasetReference",
+									"parameters": {
+										"date": {
+											"value": "@{concat(pipeline().parameters.extraction_date, '/', pipeline().parameters.ts)}",
+											"type": "Expression"
+										},
+										"extractionTool": "salesforce",
+										"region": {
+											"value": "@{pipeline().parameters.region}",
+											"type": "Expression"
+										},
+										"format": "csv",
+										"applicationName": {
+											"value": "@{pipeline().parameters.applicationName}",
+											"type": "Expression"
+										},
+										"datasetName": {
+											"value": "@pipeline().parameters.dataset_name",
+											"type": "Expression"
+										},
+										"businessUnit": {
+											"value": "@pipeline().parameters.business_unit",
+											"type": "Expression"
+										},
+										"delimiter": {
+											"value": "@pipeline().parameters.delimiter",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						},
+						{
+							"name": "OperationaLogErrorCopyFullData",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "CopyFullData",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "OperationalLogPipeline",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"nivel": "ERROR",
+									"modulo": "EXTRACTION_SALESFORCE",
+									"pipelineName": {
+										"value": "@pipeline().parameters.pipelineName",
+										"type": "Expression"
+									},
+									"logType": "ERROR",
+									"applicationName": {
+										"value": "@pipeline().parameters.applicationName",
+										"type": "Expression"
+									},
+									"dataDate": {
+										"value": "@pipeline().parameters.referenceDate",
+										"type": "Expression"
+									},
+									"datasetName": {
+										"value": "@pipeline().parameters.dataset_name",
+										"type": "Expression"
+									},
+									"region": {
+										"value": "@pipeline().parameters.region",
+										"type": "Expression"
+									},
+									"message": {
+										"value": "@concat('CopyFullData: ', activity('CopyFullData').error.message)",
+										"type": "Expression"
+									},
+									"sourceType": {
+										"value": "@pipeline().parameters.sourceType",
+										"type": "Expression"
+									},
+									"uid": {
+										"value": "@pipeline().parameters.uid",
+										"type": "Expression"
+									},
+									"parentUid": {
+										"value": "@trim('')",
+										"type": "Expression"
+									},
+									"datasetIn": {
+										"value": "@trim('')",
+										"type": "Expression"
+									},
+									"datasetOut": {
+										"value": "@trim('')",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "OperationaLogIterateStartCopyFullData",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "OperationalLogPipeline",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": false,
+								"parameters": {
+									"nivel": "INFO",
+									"modulo": "EXTRACTION_SALESFORCE",
+									"pipelineName": {
+										"value": "@pipeline().parameters.pipelineName",
+										"type": "Expression"
+									},
+									"logType": "INFO",
+									"applicationName": {
+										"value": "@pipeline().parameters.applicationName",
+										"type": "Expression"
+									},
+									"dataDate": {
+										"value": "@pipeline().parameters.referenceDate",
+										"type": "Expression"
+									},
+									"datasetName": {
+										"value": "@pipeline().parameters.dataset_name",
+										"type": "Expression"
+									},
+									"region": {
+										"value": "@pipeline().parameters.region",
+										"type": "Expression"
+									},
+									"message": {
+										"value": "@concat('Starting copy process for dataset: ', pipeline().parameters.dataset_name)",
+										"type": "Expression"
+									},
+									"sourceType": {
+										"value": "@pipeline().parameters.sourceType",
+										"type": "Expression"
+									},
+									"uid": {
+										"value": "@pipeline().parameters.uid",
+										"type": "Expression"
+									},
+									"parentUid": {
+										"value": "@trim('')",
+										"type": "Expression"
+									},
+									"datasetIn": {
+										"value": "@trim('')",
+										"type": "Expression"
+									},
+									"datasetOut": {
+										"value": "@trim('')",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "OperationaLogIterateEndCopyFullData",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "CopyFullData",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "OperationalLogPipeline",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": false,
+								"parameters": {
+									"nivel": "INFO",
+									"modulo": "EXTRACTION_SALESFORCE",
+									"pipelineName": {
+										"value": "@pipeline().parameters.pipelineName",
+										"type": "Expression"
+									},
+									"logType": "INFO",
+									"applicationName": {
+										"value": "@pipeline().parameters.applicationName",
+										"type": "Expression"
+									},
+									"dataDate": {
+										"value": "@pipeline().parameters.referenceDate",
+										"type": "Expression"
+									},
+									"datasetName": {
+										"value": "@pipeline().parameters.dataset_name",
+										"type": "Expression"
+									},
+									"region": {
+										"value": "@pipeline().parameters.region",
+										"type": "Expression"
+									},
+									"message": {
+										"value": "@concat('Finished copy process for dataset: ', pipeline().parameters.dataset_name)",
+										"type": "Expression"
+									},
+									"sourceType": {
+										"value": "@pipeline().parameters.sourceType",
+										"type": "Expression"
+									},
+									"uid": {
+										"value": "@pipeline().parameters.uid",
+										"type": "Expression"
+									},
+									"parentUid": {
+										"value": "@trim('')",
+										"type": "Expression"
+									},
+									"datasetIn": {
+										"value": "@trim('')",
+										"type": "Expression"
+									},
+									"datasetOut": {
+										"value": "@trim('')",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "CopyDataWithPartitionFilter",
+							"type": "Copy",
+							"dependsOn": [
+								{
+									"activity": "OperationaLogIterateStartCopyDataPartitioned",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "SalesforceSource",
+									"query": {
+										"value": "SELECT @{pipeline().parameters.columns} FROM @{pipeline().parameters.dataset_name} WHERE DAY_ONLY(@{pipeline().parameters.partition_column})@{if(pipeline().parameters.is_interval,'>','')}=@{formatDateTime(addDays(pipeline().parameters.referenceDate,mul(-1,pipeline().parameters.days_to_extract)),'yyyy-MM-dd')} @{if(empty(pipeline().parameters.where_filter), '', concat('and ', pipeline().parameters.where_filter))}",
+										"type": "Expression"
+									},
+									"readBehavior": "query"
+								},
+								"sink": {
+									"type": "BlobSink",
+									"copyBehavior": "PreserveHierarchy"
+								},
+								"enableStaging": false
+							},
+							"inputs": [
+								{
+									"referenceName": "SalesforceDataset",
+									"type": "DatasetReference",
+									"parameters": {
+										"environmentUrl": {
+											"value": "@pipeline().parameters.kv_environment_url",
+											"type": "Expression"
+										},
+										"username": {
+											"value": "@pipeline().parameters.kv_username",
+											"type": "Expression"
+										},
+										"password": {
+											"value": "@pipeline().parameters.kv_password_secret",
+											"type": "Expression"
+										},
+										"securityToken": {
+											"value": "@pipeline().parameters.kv_security_token_secret",
+											"type": "Expression"
+										},
+										"apiVersion": {
+											"value": "@pipeline().parameters.api_version",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "BlobStorageDatasetLandingText",
+									"type": "DatasetReference",
+									"parameters": {
+										"date": {
+											"value": "@if(equals(pipeline().parameters.is_interval, true), concat(pipeline().parameters.referenceDate, '/', pipeline().parameters.ts), concat(pipeline().parameters.extraction_date, '/', pipeline().parameters.ts))",
+											"type": "Expression"
+										},
+										"extractionTool": "salesforce",
+										"region": {
+											"value": "@{pipeline().parameters.region}",
+											"type": "Expression"
+										},
+										"format": "csv",
+										"applicationName": {
+											"value": "@{pipeline().parameters.applicationName}",
+											"type": "Expression"
+										},
+										"datasetName": {
+											"value": "@pipeline().parameters.dataset_name",
+											"type": "Expression"
+										},
+										"businessUnit": {
+											"value": "@pipeline().parameters.business_unit",
+											"type": "Expression"
+										},
+										"delimiter": {
+											"value": "@pipeline().parameters.delimiter",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						},
+						{
+							"name": "OperationaLogErrorCopyDataWithPartitionFilter",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "CopyDataWithPartitionFilter",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "OperationalLogPipeline",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"nivel": "ERROR",
+									"modulo": "EXTRACTION_SALESFORCE",
+									"pipelineName": {
+										"value": "@pipeline().parameters.pipelineName",
+										"type": "Expression"
+									},
+									"logType": "ERROR",
+									"applicationName": {
+										"value": "@pipeline().parameters.applicationName",
+										"type": "Expression"
+									},
+									"dataDate": {
+										"value": "@pipeline().parameters.referenceDate",
+										"type": "Expression"
+									},
+									"datasetName": {
+										"value": "@pipeline().parameters.dataset_name",
+										"type": "Expression"
+									},
+									"region": {
+										"value": "@pipeline().parameters.region",
+										"type": "Expression"
+									},
+									"message": {
+										"value": "@concat('CopyDataWithPartitionFilter: ', activity('CopyDataWithPartitionFilter').error.message)",
+										"type": "Expression"
+									},
+									"sourceType": {
+										"value": "@pipeline().parameters.sourceType",
+										"type": "Expression"
+									},
+									"uid": {
+										"value": "@pipeline().parameters.uid",
+										"type": "Expression"
+									},
+									"parentUid": {
+										"value": "@trim('')",
+										"type": "Expression"
+									},
+									"datasetIn": {
+										"value": "@trim('')",
+										"type": "Expression"
+									},
+									"datasetOut": {
+										"value": "@trim('')",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "OperationaLogIterateStartCopyDataPartitioned",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "OperationalLogPipeline",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": false,
+								"parameters": {
+									"nivel": "INFO",
+									"modulo": "EXTRACTION_SALESFORCE",
+									"pipelineName": {
+										"value": "@pipeline().parameters.pipelineName",
+										"type": "Expression"
+									},
+									"logType": "INFO",
+									"applicationName": {
+										"value": "@pipeline().parameters.applicationName",
+										"type": "Expression"
+									},
+									"dataDate": {
+										"value": "@pipeline().parameters.referenceDate",
+										"type": "Expression"
+									},
+									"datasetName": {
+										"value": "@pipeline().parameters.dataset_name",
+										"type": "Expression"
+									},
+									"region": {
+										"value": "@pipeline().parameters.region",
+										"type": "Expression"
+									},
+									"message": {
+										"value": "@concat('Starting copy process for dataset: ', pipeline().parameters.dataset_name)",
+										"type": "Expression"
+									},
+									"sourceType": {
+										"value": "@pipeline().parameters.sourceType",
+										"type": "Expression"
+									},
+									"uid": {
+										"value": "@pipeline().parameters.uid",
+										"type": "Expression"
+									},
+									"parentUid": {
+										"value": "@trim('')",
+										"type": "Expression"
+									},
+									"datasetIn": {
+										"value": "@trim('')",
+										"type": "Expression"
+									},
+									"datasetOut": {
+										"value": "@trim('')",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "OperationaLogIterateEndCopyDataPartitioned",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "CopyDataWithPartitionFilter",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "OperationalLogPipeline",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": false,
+								"parameters": {
+									"nivel": "INFO",
+									"modulo": "EXTRACTION_SALESFORCE",
+									"pipelineName": {
+										"value": "@pipeline().parameters.pipelineName",
+										"type": "Expression"
+									},
+									"logType": "INFO",
+									"applicationName": {
+										"value": "@pipeline().parameters.applicationName",
+										"type": "Expression"
+									},
+									"dataDate": {
+										"value": "@pipeline().parameters.referenceDate",
+										"type": "Expression"
+									},
+									"datasetName": {
+										"value": "@pipeline().parameters.dataset_name",
+										"type": "Expression"
+									},
+									"region": {
+										"value": "@pipeline().parameters.region",
+										"type": "Expression"
+									},
+									"message": {
+										"value": "@concat('Finished copy process for dataset: ', pipeline().parameters.dataset_name)",
+										"type": "Expression"
+									},
+									"sourceType": {
+										"value": "@pipeline().parameters.sourceType",
+										"type": "Expression"
+									},
+									"uid": {
+										"value": "@pipeline().parameters.uid",
+										"type": "Expression"
+									},
+									"parentUid": {
+										"value": "@trim('')",
+										"type": "Expression"
+									},
+									"datasetIn": {
+										"value": "@trim('')",
+										"type": "Expression"
+									},
+									"datasetOut": {
+										"value": "@trim('')",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"partition_column": {
+				"type": "string"
+			},
+			"pipelineName": {
+				"type": "string"
+			},
+			"applicationName": {
+				"type": "string"
+			},
+			"referenceDate": {
+				"type": "string"
+			},
+			"dataset_name": {
+				"type": "string"
+			},
+			"region": {
+				"type": "string"
+			},
+			"sourceType": {
+				"type": "string"
+			},
+			"uid": {
+				"type": "string"
+			},
+			"kv_environment_url": {
+				"type": "string"
+			},
+			"kv_username": {
+				"type": "string"
+			},
+			"kv_password_secret": {
+				"type": "string"
+			},
+			"kv_security_token_secret": {
+				"type": "string"
+			},
+			"api_version": {
+				"type": "string"
+			},
+			"is_interval": {
+				"type": "bool"
+			},
+			"ts": {
+				"type": "string"
+			},
+			"extraction_date": {
+				"type": "string"
+			},
+			"business_unit": {
+				"type": "string"
+			},
+			"columns": {
+				"type": "string"
+			},
+			"where_filter": {
+				"type": "string"
+			},
+			"days_to_extract": {
+				"type": "int"
+			},
+			"delimiter": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "extraction/salesforce"
+		},
+		"annotations": []
+	}
+}

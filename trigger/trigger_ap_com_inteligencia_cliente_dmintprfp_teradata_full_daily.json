@@ -1,0 +1,47 @@
+{
+	"name": "trigger_ap_com_inteligencia_cliente_dmintprfp_teradata_full_daily",
+	"properties": {
+		"description": "Full daily trigger for OPP - Teradata new data extraction",
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "TeradataCloudPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "AP_COM_INTELIGENCIA_CLIENTE",
+					"is_interval": false,
+					"package": "DMINTPRFP_TERADATA_FULL_DAILY",
+					"region": "GLB",
+					"mock": "false"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Week",
+				"interval": 1,
+				"startTime": "2021-07-27T07:50:00Z",
+				"timeZone": "UTC",
+				"schedule": {
+					"minutes": [
+						0
+					],
+					"hours": [
+						2
+					],
+					"weekDays": [
+						"Monday",
+						"Tuesday",
+						"Wednesday",
+						"Thursday",
+						"Friday"
+					]
+				}
+			}
+		}
+	}
+}

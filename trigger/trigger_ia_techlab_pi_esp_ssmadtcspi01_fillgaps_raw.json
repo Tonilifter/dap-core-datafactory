@@ -1,0 +1,32 @@
+{
+	"name": "trigger_ia_techlab_pi_esp_ssmadtcspi01_fillgaps_raw",
+	"properties": {
+		"description": "Trigger 5m brutos TechLab rellenado de huecos",
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "PISystemFillGapsPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "IA_TECHLAB_PI",
+					"region": "ESP",
+					"piServer": "SSMADTCSPI01",
+					"mode": "raw",
+					"interval": "5m"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Minute",
+				"interval": 25,
+				"startTime": "2021-11-19T08:00:00",
+				"timeZone": "Romance Standard Time"
+			}
+		}
+	}
+}

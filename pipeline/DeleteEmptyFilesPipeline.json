@@ -1,0 +1,50 @@
+{
+    "name": "DeleteEmptyFilesPipeline",
+    "properties": {
+        "activities": [{
+            "name": "DeleteEmptyFiles",
+            "type": "DatabricksSparkJar",
+            "dependsOn": [],
+            "policy": {
+                "timeout": "7.00:00:00",
+                "retry": 0,
+                "retryIntervalInSeconds": 30,
+                "secureOutput": false,
+                "secureInput": false
+            },
+            "userProperties": [],
+            "typeProperties": {
+                "mainClassName": "com.repsol.blobstorage.DeleteEmptyFiles",
+                "parameters": [
+                    "@{concat(replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), 'sa', pipeline().parameters.business_unit, pipeline().parameters.secure)}"
+                ],
+                "libraries": [{
+                    "jar": "dbfs:/FileStore/job-jars-ci/housekeeping-jar-with-dependencies.jar"
+                }]
+            },
+            "linkedServiceName": {
+                "referenceName": "AzureDatabricksDynamicLinkedService",
+                "type": "LinkedServiceReference",
+                "parameters": {
+                    "workers": "1:2",
+                    "token": "dbcoar-databricks-token",
+                    "clusterVersion": "6.4.x-esr-scala2.11"
+                }
+            }
+        }],
+        "parameters": {
+            "business_unit": {
+                "type": "string",
+                "defaultValue": "com"
+            },
+            "secure": {
+                "type": "string",
+                "defaultValue": "il"
+            }
+        },
+        "folder": {
+            "name": "housekeeping"
+        },
+        "annotations": []
+    }
+}

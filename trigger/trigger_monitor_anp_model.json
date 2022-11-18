@@ -1,0 +1,44 @@
+{
+	"name": "trigger_monitor_anp_model",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "MonitorPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"monitorId": "PR_ANP_Model",
+					"laQuery": "adfOperationLogs('bargescrack_forward_curves','IngestionFileReceiverPipeline','','BargesCrack_Forward_Curves','')\n| union adfOperationLogs('bargescrack_prices','IngestionFileReceiverPipeline','','staging/external/AP_TRAD_TRITON/ESP/bargescrack_prices/bargescrack_prices','')\n| union adfOperationLogs('hddcdd_daily','IngestionFileReceiverPipeline','','hddcdd_daily','')\n| union adfOperationLogs('margenes_tg','IngestionFileReceiverPipeline','','margenes_tg','')\n| union adfOperationLogs('uralmargin_forwardcurves','IngestionFileReceiverPipeline','','uralmargin_forwardcurves','')\n| union adfOperationLogs('vortexa_fuel_flows_new','IngestionFileReceiverPipeline','','vortexa_fuel_flows_new','')\n| union adfOperationLogs('fo_east_west_new','IngestionFileReceiverPipeline','','fo_east_west_new','')\n| invoke SummarizeADF()\n| union ( \n    aksOperationLogs('daplatform0101pakmllab','dap-mllab-anpmodel', '')\n    | invoke SummarizeSearchAKS('FINISH WRITE DATA', 'dap-mllab-anpmodel')\n)\n| extend IS_OK = iif(Name=='dap-mllab-anpmodel', IS_OK, IS_OK and End < now(-45m))\n| extend ADDITIONAL_INFO = iif(Name=='dap-mllab-anpmodel' or End < now(-45m), ADDITIONAL_INFO, strcat(ADDITIONAL_INFO, ' | Error: Se ha ingestado tarde'))\n| invoke MonitorSummarize() ",
+					"timespan": "PT12H"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Week",
+				"interval": 1,
+				"startTime": "2021-12-17T09:00:00",
+				"timeZone": "Romance Standard Time",
+				"schedule": {
+					"minutes": [
+						15
+					],
+					"hours": [
+						12
+					],
+					"weekDays": [
+						"Monday",
+						"Tuesday",
+						"Wednesday",
+						"Thursday",
+						"Friday"
+					]
+				}
+			}
+		}
+	}
+}

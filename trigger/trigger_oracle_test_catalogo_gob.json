@@ -1,0 +1,31 @@
+{
+	"name": "trigger_oracle_test_catalogo_gob",
+	"properties": {
+		"description": "Trigger creado para probar la extracción de oracle cuando se crean los metadatos desde el catálogo de goierno",
+		"annotations": [],
+		"runtimeState": "Started",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "OraclePipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "AP_EYP_PI",
+					"region": "GLB",
+					"is_interval": false,
+					"mock": "false"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Hour",
+				"interval": 24,
+				"startTime": "2020-10-20T06:00:00Z",
+				"timeZone": "UTC"
+			}
+		}
+	}
+}

@@ -1,0 +1,37 @@
+{
+	"name": "trigger_ia_eyp_environmental_envirosoft_glb_sftp",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Started",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "FilesPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "IA_EYP_ENVIRONMENTAL_ENVIROSOFT",
+					"region": "GLB",
+					"mock": "false"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2020-04-28T03:00:00Z",
+				"timeZone": "UTC",
+				"schedule": {
+					"minutes": [
+						30
+					],
+					"hours": [
+						3
+					]
+				}
+			}
+		}
+	}
+}

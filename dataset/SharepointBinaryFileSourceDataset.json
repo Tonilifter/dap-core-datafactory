@@ -1,0 +1,30 @@
+{
+	"name": "SharepointBinaryFileSourceDataset",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "AnonymousHttpLinkedService",
+			"type": "LinkedServiceReference",
+			"parameters": {
+				"baseUrl": {
+					"value": "@concat(dataset().baseUrl,'/_api/web/GetFileByServerRelativeUrl(''',dataset().fileUrl,''')/$value')",
+					"type": "Expression"
+				}
+			}
+		},
+		"parameters": {
+			"baseUrl": {
+				"type": "string"
+			},
+			"fileUrl": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"type": "Binary",
+		"typeProperties": {
+			"location": {
+				"type": "HttpServerLocation"
+			}
+		}
+	}
+}

@@ -1,0 +1,41 @@
+{
+	"name": "trigger_ap_eyp_pms_ml_peru",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "OraclePipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "AP_EYP_PMS",
+					"region": "GLB",
+					"is_interval": false,
+					"referenceDate": "@formatDateTime(convertFromUtc(trigger().startTime, 'UTC'),'yyyy/MM/dd')",
+					"sourceType": "db",
+					"mock": "false",
+					"package": "ENERGY COMPONENTS - ML PERU"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2021-12-17T07:34:00Z",
+				"timeZone": "UTC",
+				"schedule": {
+					"minutes": [
+						0
+					],
+					"hours": [
+						15
+					]
+				}
+			}
+		}
+	}
+}

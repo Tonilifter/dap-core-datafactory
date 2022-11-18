@@ -1,0 +1,38 @@
+{
+	"name": "trigger_monitor_adf_systemerror",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "MonitorPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"monitorId": "$AP_IT&D_ARiA$_GLB_ADF_SystemError",
+					"laQuery": "let T2 = ADFPipelineRun\n| where FailureType == 'SystemError'\n| project \n    ACTIVITY_NAME=strcat('[', format_datetime(TimeGenerated, 'yyyy/MM/dd'), '] ', PipelineName, ': ', RunId),\n    IS_OK = false,\n    ADDITIONAL_INFO=strcat('[SystemError] | Parameters: ', Parameters)\n    ;\nlet T2_has_records = toscalar(T2 | summarize count() > 0);\nunion \n(T2 | where T2_has_records == true),\n(datatable(ACTIVITY_NAME:string, IS_OK:bool, ADDITIONAL_INFO:string)['',true,'[Succeeded] Could not find any ADF SystemError'] | extend ACTIVITY_NAME=strcat('[#referenceDate#]') | where T2_has_records == false)\n| invoke MonitorSummarize()",
+					"timespan": "PT12H"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2022-01-12T15:32:00",
+				"timeZone": "Romance Standard Time",
+				"schedule": {
+					"minutes": [
+						0
+					],
+					"hours": [
+						7,
+						19
+					]
+				}
+			}
+		}
+	}
+}

@@ -1,0 +1,38 @@
+{
+	"name": "trigger_e2e_esp_sql",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "SQLServerPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "AP_E2E_SQL_TESTS",
+					"region": "ESP",
+					"sourceType": "db",
+					"mock": "true"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2020-07-28T07:00:00.000Z",
+				"timeZone": "UTC",
+				"schedule": {
+					"minutes": [
+						0
+					],
+					"hours": [
+						7
+					]
+				}
+			}
+		}
+	}
+}

@@ -1,0 +1,43 @@
+{
+	"name": "trigger_ia_techlab_pi_esp_ssmadtcspi01_stats",
+	"properties": {
+		"description": "Trigger diario estadisticos techlab",
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "PISystemProcessPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "IA_TECHLAB_PI",
+					"region": "ESP",
+					"piServer": "SSMADTCSPI01",
+					"startTime": "y",
+					"endTime": "t",
+					"mode": "stats",
+					"interval": "1d",
+					"historicalExecution": false
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2021-11-19T10:12:00",
+				"timeZone": "Romance Standard Time",
+				"schedule": {
+					"minutes": [
+						0
+					],
+					"hours": [
+						1
+					]
+				}
+			}
+		}
+	}
+}

@@ -1,0 +1,69 @@
+{
+	"name": "DatalakeArchiverGetHourRangePipelineFixIR",
+	"properties": {
+		"activities": [
+			{
+				"name": "IterateRootFolders",
+				"type": "ForEach",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@pipeline().parameters.deltas",
+						"type": "Expression"
+					},
+					"isSequential": false,
+					"batchCount": 8,
+					"activities": [
+						{
+							"name": "DatalakeArchiverGetModifiedFolders",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "DatalakeArchiverGetModifiedFoldersPipelineFixIR",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"deltaStart": {
+										"value": "@item().start",
+										"type": "Expression"
+									},
+									"deltaEnd": {
+										"value": "@item().end",
+										"type": "Expression"
+									},
+									"rootFolders": {
+										"value": "@pipeline().parameters.rootFolders",
+										"type": "Expression"
+									},
+									"businessUnit": {
+										"value": "@pipeline().parameters.businessUnit",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"deltas": {
+				"type": "array"
+			},
+			"rootFolders": {
+				"type": "string"
+			},
+			"businessUnit": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "archiver/fix_ir"
+		},
+		"annotations": []
+	}
+}

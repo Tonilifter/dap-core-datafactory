@@ -1,0 +1,41 @@
+{
+	"name": "trigger_ap_ref_sistema_integrado_produccion_logistica_esp_oracle_backasting",
+	"properties": {
+		"description": "Trigger para la extracción de las tablas de SIPL para Backasting online",
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "OraclePipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "AP_REF_SISTEMA_INTEGRADO_PRODUCCION_LOGISTICA",
+					"region": "ESP",
+					"is_interval": true,
+					"sourceType": "db",
+					"mock": "false",
+					"package": "SIPL - Backcasting"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2021-06-10T08:58:00Z",
+				"timeZone": "UTC",
+				"schedule": {
+					"minutes": [
+						0
+					],
+					"hours": [
+						18
+					]
+				}
+			}
+		}
+	}
+}

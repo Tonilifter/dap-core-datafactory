@@ -1,0 +1,41 @@
+{
+	"name": "trigger_ap_ref_skf_per_external_api_skf",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "ExternalAPIAzureFunctionPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "AP_REF_SKF",
+					"region": "PER",
+					"is_interval": false,
+					"package": "SKF_PAMPILLA",
+					"mock": "false",
+					"is_durable": false,
+					"referenceDate": "@formatDateTime(convertFromUtc(trigger().startTime, 'SA Pacific Standard Time'),'yyyy/MM/dd')"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2021-12-22T01:00:00",
+				"timeZone": "SA Pacific Standard Time",
+				"schedule": {
+					"minutes": [
+						0
+					],
+					"hours": [
+						1
+					]
+				}
+			}
+		}
+	}
+}

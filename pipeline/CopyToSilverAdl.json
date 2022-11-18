@@ -1,0 +1,217 @@
+{
+	"name": "CopyToSilverAdl",
+	"properties": {
+		"activities": [
+			{
+				"name": "IsEmptyFolderPathOrFileName",
+				"type": "IfCondition",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@or(or(equals(pipeline().parameters.p_folder_path, '*'), empty(pipeline().parameters.p_folder_path)), or(equals(pipeline().parameters.p_file_name, '*'), empty(pipeline().parameters.p_file_name)))",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "CheckFileWithFolder",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "CheckFileWithFolder",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"p_folder_path": {
+										"value": "@pipeline().parameters.p_folder_path",
+										"type": "Expression"
+									},
+									"p_file_name": {
+										"value": "@pipeline().parameters.p_file_name",
+										"type": "Expression"
+									},
+									"p_dl_name": {
+										"value": "@pipeline().parameters.p_dl_name",
+										"type": "Expression"
+									},
+									"overwrite_file": {
+										"value": "@pipeline().parameters.overwrite_file",
+										"type": "Expression"
+									},
+									"layer": {
+										"value": "@pipeline().parameters.layer",
+										"type": "Expression"
+									},
+									"app": {
+										"value": "@pipeline().parameters.app",
+										"type": "Expression"
+									},
+									"region": {
+										"value": "@pipeline().parameters.region",
+										"type": "Expression"
+									},
+									"dataset": {
+										"value": "@pipeline().parameters.dataset",
+										"type": "Expression"
+									},
+									"datadate": {
+										"value": "@pipeline().parameters.datadate",
+										"type": "Expression"
+									},
+									"source_type": {
+										"value": "@pipeline().parameters.source_type",
+										"type": "Expression"
+									},
+									"is_consolidated": {
+										"value": "@pipeline().parameters.is_consolidated",
+										"type": "Expression"
+									},
+									"output_dataset": {
+										"value": "@pipeline().parameters.output_dataset",
+										"type": "Expression"
+									},
+									"filter_path": {
+										"value": "@pipeline().parameters.filter_path",
+										"type": "Expression"
+									},
+									"business_unit": {
+										"value": "@pipeline().parameters.business_unit",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "CheckFile",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "CheckFile",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"business_unit": {
+										"value": "@pipeline().parameters.business_unit",
+										"type": "Expression"
+									},
+									"layer": {
+										"value": "@pipeline().parameters.layer",
+										"type": "Expression"
+									},
+									"app": {
+										"value": "@pipeline().parameters.app",
+										"type": "Expression"
+									},
+									"region": {
+										"value": "@pipeline().parameters.region",
+										"type": "Expression"
+									},
+									"dataset": {
+										"value": "@pipeline().parameters.dataset",
+										"type": "Expression"
+									},
+									"datadate": {
+										"value": "@pipeline().parameters.datadate",
+										"type": "Expression"
+									},
+									"source_type": {
+										"value": "@pipeline().parameters.source_type",
+										"type": "Expression"
+									},
+									"p_folder_path": {
+										"value": "@pipeline().parameters.p_folder_path",
+										"type": "Expression"
+									},
+									"p_file_name": {
+										"value": "@pipeline().parameters.p_file_name",
+										"type": "Expression"
+									},
+									"is_consolidated": {
+										"value": "@pipeline().parameters.is_consolidated",
+										"type": "Expression"
+									},
+									"p_dl_name": {
+										"value": "@pipeline().parameters.p_dl_name",
+										"type": "Expression"
+									},
+									"output_dataset": {
+										"value": "@pipeline().parameters.output_dataset",
+										"type": "Expression"
+									},
+									"filter_path": {
+										"value": "@pipeline().parameters.filter_path",
+										"type": "Expression"
+									},
+									"overwrite_file": {
+										"value": "@pipeline().parameters.overwrite_file",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"business_unit": {
+				"type": "string"
+			},
+			"layer": {
+				"type": "string",
+				"defaultValue": "raw"
+			},
+			"app": {
+				"type": "string"
+			},
+			"region": {
+				"type": "string",
+				"defaultValue": "GLB"
+			},
+			"dataset": {
+				"type": "string"
+			},
+			"datadate": {
+				"type": "string"
+			},
+			"source_type": {
+				"type": "string"
+			},
+			"p_folder_path": {
+				"type": "string"
+			},
+			"p_file_name": {
+				"type": "string"
+			},
+			"is_consolidated": {
+				"type": "bool",
+				"defaultValue": false
+			},
+			"p_dl_name": {
+				"type": "string"
+			},
+			"output_dataset": {
+				"type": "string"
+			},
+			"filter_path": {
+				"type": "string"
+			},
+			"overwrite_file": {
+				"type": "bool",
+				"defaultValue": false
+			}
+		},
+		"folder": {
+			"name": "utils"
+		},
+		"annotations": []
+	}
+}

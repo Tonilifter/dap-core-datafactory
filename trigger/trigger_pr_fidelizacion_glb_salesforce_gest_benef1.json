@@ -1,0 +1,40 @@
+{
+	"name": "trigger_pr_fidelizacion_glb_salesforce_gest_benef1",
+	"properties": {
+		"description": "Trigger para realizar la extracción diaria de Salesforce para los datasets de Gestor de beneficios (Fidelización Global)",
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "SalesforcePipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "PR_FIDELIZACION",
+					"region": "GLB",
+					"is_interval": false,
+					"mock": "false",
+					"package": "FIDELIZACION_SF_GESTOR_BENEF"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2021-09-06T11:17:00",
+				"timeZone": "Romance Standard Time",
+				"schedule": {
+					"minutes": [
+						30
+					],
+					"hours": [
+						4
+					]
+				}
+			}
+		}
+	}
+}

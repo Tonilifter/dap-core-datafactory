@@ -1,0 +1,45 @@
+{
+	"name": "AzureDataLakeStorageArchiver",
+	"properties": {
+		"type": "AzureBlobFS",
+		"annotations": [],
+		"typeProperties": {
+			"url": "https://@{linkedService().storageAccount}.dfs.core.windows.net",
+			"tenant": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "KeyVaultLinkedService",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": "df-dap-tenant-id"
+			},
+			"servicePrincipalId": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "KeyVaultLinkedService",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": "adapp-archiver-id"
+			},
+			"servicePrincipalKey": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "KeyVaultLinkedService",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": "adsp-archiver-secret"
+			}
+		},
+		"parameters": {
+			"storageAccount": {
+				"type": "String",
+				"defaultValue": ""
+			}
+		},
+		"description": "AzureDataLakeStorageArchiver",
+		"connectVia": {
+			"referenceName": "IntegrationRuntimeFreezer",
+			"type": "IntegrationRuntimeReference"
+		}
+	}
+}

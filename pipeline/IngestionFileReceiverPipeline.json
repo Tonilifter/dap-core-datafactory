@@ -1,0 +1,952 @@
+{
+	"name": "IngestionFileReceiverPipeline",
+	"properties": {
+		"activities": [
+			{
+				"name": "GetMetadata",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "Set httpToken",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlSource",
+						"sqlReaderQuery": {
+							"value": "SELECT *  FROM dbo.file_receiver WHERE application_name = '@{split(pipeline().parameters.p_folder_path, '/')[2]}' and region = '@{split(pipeline().parameters.p_folder_path, '/')[3]}' and dataset_name = '@{split(pipeline().parameters.p_folder_path, '/')[4]}' and is_active = '1'",
+							"type": "Expression"
+						},
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "AzureSqlDataset",
+						"type": "DatasetReference",
+						"parameters": {
+							"tableName": "dbo.file_receiver",
+							"secretName": "db-metadata-secret"
+						}
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "OperationaLogErrorGetMetadata",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "GetMetadata",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "OperationalLogPipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"nivel": "ERROR",
+						"modulo": "INGESTION_FILERECEIVER",
+						"pipelineName": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"logType": "END",
+						"applicationName": {
+							"value": "@{split(pipeline().parameters.p_folder_path, '/')[2]}",
+							"type": "Expression"
+						},
+						"dataDate": {
+							"value": "@variables('dataDate')",
+							"type": "Expression"
+						},
+						"datasetName": {
+							"value": "@{split(pipeline().parameters.p_folder_path, '/')[4]}",
+							"type": "Expression"
+						},
+						"region": {
+							"value": "@{split(pipeline().parameters.p_folder_path, '/')[4]}",
+							"type": "Expression"
+						},
+						"message": {
+							"value": "@concat('GetMetadata: ', activity('GetMetadata').error.message)",
+							"type": "Expression"
+						},
+						"uid": {
+							"value": "@variables('uid')",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "If Condition Structured",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "GetGovernanceMetadata",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@bool(activity('GetGovernanceMetadata').output.datasets[0].structured)",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "bs_landing_unestructured_to_dl",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "BlobSource",
+									"recursive": true
+								},
+								"sink": {
+									"type": "AzureDataLakeStoreSink"
+								},
+								"enableStaging": false
+							},
+							"inputs": [
+								{
+									"referenceName": "BlobStorageTriggerDataSet",
+									"type": "DatasetReference",
+									"parameters": {
+										"p_folder_path": "@pipeline().parameters.p_folder_path",
+										"p_file_name": "@pipeline().parameters.p_file_name",
+										"businessUnit": "@activity('GetGovernanceMetadata').output.datasets[0].business_unit",
+										"landingType": "il"
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "DataLakeUnstructuredDataSet",
+									"type": "DatasetReference",
+									"parameters": {
+										"p_folder_path": {
+											"value": "@{concat('raw/', replace(pipeline().parameters.p_folder_path, 'staging', ''), '/year=', substring(pipeline().parameters.p_file_name,add(lastindexof(pipeline().parameters.p_file_name, '-'),1), 4), '/month=',substring(pipeline().parameters.p_file_name,add(lastindexof(pipeline().parameters.p_file_name, '-'),5), 2),\n'/day=',substring(pipeline().parameters.p_file_name,add(lastindexof(pipeline().parameters.p_file_name, '-'),7), 2))}",
+											"type": "Expression"
+										},
+										"p_file_name": {
+											"value": "@{concat(substring(pipeline().parameters.p_file_name,0,lastindexof(pipeline().parameters.p_file_name,'--')), substring(pipeline().parameters.p_file_name,lastindexof(pipeline().parameters.p_file_name,'.'),sub(length(pipeline().parameters.p_file_name), lastindexof(pipeline().parameters.p_file_name,'.'))))}",
+											"type": "Expression"
+										},
+										"p_dl_name": {
+											"value": "@{concat(replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), activity('GetGovernanceMetadata').output.datasets[0].business_unit, 'dapdls')}",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						},
+						{
+							"name": "delete_bs_landing_file",
+							"type": "Delete",
+							"dependsOn": [
+								{
+									"activity": "bs_landing_unestructured_to_dl",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"dataset": {
+									"referenceName": "BlobStorageTriggerDataSet",
+									"type": "DatasetReference",
+									"parameters": {
+										"p_folder_path": "@pipeline().parameters.p_folder_path",
+										"p_file_name": "@pipeline().parameters.p_file_name",
+										"businessUnit": "@activity('GetGovernanceMetadata').output.datasets[0].business_unit",
+										"landingType": "il"
+									}
+								},
+								"enableLogging": false
+							}
+						},
+						{
+							"name": "OperationaLogErrorCopyData",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "bs_landing_unestructured_to_dl",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "OperationalLogPipeline",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"nivel": "ERROR",
+									"modulo": "INGESTION_FILERECEIVER",
+									"pipelineName": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"logType": "END",
+									"dataDate": {
+										"value": "@variables('dataDate')",
+										"type": "Expression"
+									},
+									"uid": {
+										"value": "@variables('uid')",
+										"type": "Expression"
+									},
+									"parentUid": {
+										"value": "@trim('')",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "OperationaLogEnd",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "bs_landing_unestructured_to_dl",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "OperationalLogPipeline",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": false,
+								"parameters": {
+									"nivel": "INFO",
+									"modulo": "INGESTION_FILERECEIVER",
+									"pipelineName": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"logType": "END",
+									"applicationName": {
+										"value": "@{split(pipeline().parameters.p_folder_path, '/')[2]}",
+										"type": "Expression"
+									},
+									"dataDate": {
+										"value": "@variables('dataDate')",
+										"type": "Expression"
+									},
+									"uid": {
+										"value": "@variables('uid')",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "Ingest extracted files",
+							"type": "DatabricksSparkJar",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"mainClassName": "com.repsol.datalake.ingestion.IngestionJob",
+								"parameters": [
+									"-o",
+									"@{concat('wasbs://staging@', replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), 'sa', activity('GetGovernanceMetadata').output.datasets[0].business_unit, 'il.blob.core.windows.net', replace(pipeline().parameters.p_folder_path, 'staging', ''), '/', pipeline().parameters.p_file_name)}",
+									"-c",
+									"@concat('', activity('GetGovernanceMetadata').output.datasets[0].coalesce_value)",
+									"-r",
+									"@concat('', activity('GetGovernanceMetadata').output.datasets[0].repartition_value)",
+									"-d",
+									"@activity('GetGovernanceMetadata').output.datasets[0].delimiter",
+									"-t",
+									"@{if(empty(pipeline().parameters.ts),'null',pipeline().parameters.ts)}",
+									"-p",
+									"N/A",
+									"-u",
+									"@variables('uid')",
+									"-a",
+									"@string(activity('GetGovernanceMetadata').output.datasets[0].append)",
+									"-n",
+									"@string(activity('GetGovernanceMetadata').output.datasets[0].add_file_name)",
+									"-m",
+									"@coalesce(string(activity('GetGovernanceMetadata').output.datasets[0].multiline), 'false')",
+									"-f",
+									"@{if(empty(activity('GetGovernanceMetadata').output.datasets[0].fileFormat),'',activity('GetGovernanceMetadata').output.datasets[0].fileFormat)}",
+									"-h",
+									"@string(activity('GetGovernanceMetadata').output.datasets[0].header)"
+								],
+								"libraries": [
+									{
+										"jar": "dbfs:/FileStore/job-jars-ci/ingestion-jar-with-dependencies.jar"
+									}
+								]
+							},
+							"linkedServiceName": {
+								"referenceName": "AzureDatabricksDynamicLinkedService",
+								"type": "LinkedServiceReference",
+								"parameters": {
+									"workers": {
+										"value": "@{if(empty(string(activity('GetGovernanceMetadata').output.datasets[0].min_workers)),2,string(activity('GetGovernanceMetadata').output.datasets[0].min_workers))}:@{if(empty(string(activity('GetGovernanceMetadata').output.datasets[0].max_workers)),8,string(activity('GetGovernanceMetadata').output.datasets[0].max_workers))}",
+										"type": "Expression"
+									},
+									"token": "dbcoar-databricks-token",
+									"clusterVersion": "6.4.x-esr-scala2.11"
+								}
+							}
+						},
+						{
+							"name": "OperationaLogErrorIngestExtractedFiles",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "Ingest extracted files",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "OperationalLogPipeline",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"nivel": "ERROR",
+									"modulo": "INGESTION_FILERECEIVER",
+									"pipelineName": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"logType": "END",
+									"applicationName": {
+										"value": "@{split(pipeline().parameters.p_folder_path, '/')[2]}",
+										"type": "Expression"
+									},
+									"dataDate": {
+										"value": "@variables('dataDate')",
+										"type": "Expression"
+									},
+									"datasetName": {
+										"value": "@{split(pipeline().parameters.p_folder_path, '/')[4]}",
+										"type": "Expression"
+									},
+									"region": {
+										"value": "@{split(pipeline().parameters.p_folder_path, '/')[3]}",
+										"type": "Expression"
+									},
+									"message": {
+										"value": "@concat('Ingest extracted files: ', activity('Ingest extracted files').error.message)",
+										"type": "Expression"
+									},
+									"sourceType": {
+										"value": "@pipeline().parameters.sourceType",
+										"type": "Expression"
+									},
+									"uid": {
+										"value": "@variables('uid')",
+										"type": "Expression"
+									},
+									"parentUid": {
+										"value": "@trim('')",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "Move file",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "Ingest extracted files",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "CopyILBlobToAdl",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": false,
+								"parameters": {
+									"p_layer": "staging",
+									"p_prefix_path": {
+										"value": "@replace(pipeline().parameters.p_folder_path, 'staging', '')",
+										"type": "Expression"
+									},
+									"p_file_name": {
+										"value": "@pipeline().parameters.p_file_name",
+										"type": "Expression"
+									},
+									"p_business_unit": {
+										"value": "@activity('GetGovernanceMetadata').output.datasets[0].business_unit",
+										"type": "Expression"
+									},
+									"p_landing_type": "il"
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "ExecuteProcessorPipeline",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "If Condition Structured",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "ProcessorPipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"applicationName": {
+							"value": "@activity('GetGovernanceMetadata').output.datasets[0].application_name",
+							"type": "Expression"
+						},
+						"region": {
+							"value": "@activity('GetGovernanceMetadata').output.datasets[0].region",
+							"type": "Expression"
+						},
+						"datasetName": {
+							"value": "@activity('GetGovernanceMetadata').output.datasets[0].dataset_name",
+							"type": "Expression"
+						},
+						"extractionDate": {
+							"value": "@{concat(substring(pipeline().parameters.p_file_name,add(lastindexof(pipeline().parameters.p_file_name, '-'),1), 4)\n, '/',\nsubstring(pipeline().parameters.p_file_name,add(lastindexof(pipeline().parameters.p_file_name, '-'),5), 2)\n, '/',\nsubstring(pipeline().parameters.p_file_name,add(lastindexof(pipeline().parameters.p_file_name, '-'),7), 2))}",
+							"type": "Expression"
+						},
+						"parentUid": {
+							"value": "@variables('uid')",
+							"type": "Expression"
+						},
+						"p_folder_path": {
+							"value": "@if(bool(activity('GetGovernanceMetadata').output.datasets[0].structured), '', concat('raw/', replace(pipeline().parameters.p_folder_path, 'staging', ''), '/year=', substring(pipeline().parameters.p_file_name,add(lastindexof(pipeline().parameters.p_file_name, '-'),1), 4), '/month=',substring(pipeline().parameters.p_file_name,add(lastindexof(pipeline().parameters.p_file_name, '-'),5), 2),\n'/day=',substring(pipeline().parameters.p_file_name,add(lastindexof(pipeline().parameters.p_file_name, '-'),7), 2)))",
+							"type": "Expression"
+						},
+						"p_file_name": {
+							"value": "@if(bool(activity('GetGovernanceMetadata').output.datasets[0].structured), '', concat(substring(pipeline().parameters.p_file_name,0,lastindexof(pipeline().parameters.p_file_name,'--')), substring(pipeline().parameters.p_file_name,lastindexof(pipeline().parameters.p_file_name,'.'),sub(length(pipeline().parameters.p_file_name), lastindexof(pipeline().parameters.p_file_name,'.')))))",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "GetGovernanceMetadata",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "Set mock",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": true
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@concat('https://coreutils', replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), 'akcore.cloudapp.repsol.com/dap-core-extraction-utils/governance-metadata')",
+						"type": "Expression"
+					},
+					"method": "GET",
+					"headers": {
+						"x-application-name": {
+							"value": "@{split(pipeline().parameters.p_folder_path, '/')[2]}",
+							"type": "Expression"
+						},
+						"x-region": {
+							"value": "@{split(pipeline().parameters.p_folder_path, '/')[3]}",
+							"type": "Expression"
+						},
+						"x-dataset-name": {
+							"value": "@{split(pipeline().parameters.p_folder_path, '/')[4]}",
+							"type": "Expression"
+						},
+						"x-mock-results": {
+							"value": "@variables('mock')",
+							"type": "Expression"
+						},
+						"Authorization": {
+							"value": "@concat('Bearer ', variables('httpToken'))",
+							"type": "Expression"
+						},
+						"x-source-type": {
+							"value": "@pipeline().parameters.sourceType",
+							"type": "Expression"
+						},
+						"x-reference-date": {
+							"value": "@variables('dataDate')",
+							"type": "Expression"
+						},
+						"x-package-name": {
+							"value": "@pipeline().parameters.package",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "GetAppIdToken",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "OperationaLogStart",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": true,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@concat('https://', replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), 'corekv.vault.azure.net/secrets/adapp-extract-id?api-version=7.0')",
+						"type": "Expression"
+					},
+					"connectVia": {
+						"referenceName": "IntegrationRuntimeFreezer",
+						"type": "IntegrationRuntimeReference"
+					},
+					"method": "GET",
+					"authentication": {
+						"type": "MSI",
+						"resource": "https://vault.azure.net"
+					}
+				}
+			},
+			{
+				"name": "Set appIdToken",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "GetAppIdToken",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "appIdToken",
+					"value": {
+						"value": "@activity('GetAppIdToken').output.value",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "GetAppSecretToken",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "Set appIdToken",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": true,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@concat('https://', replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), 'corekv.vault.azure.net/secrets/adsp-extract-secret?api-version=7.0')",
+						"type": "Expression"
+					},
+					"connectVia": {
+						"referenceName": "IntegrationRuntimeFreezer",
+						"type": "IntegrationRuntimeReference"
+					},
+					"method": "GET",
+					"authentication": {
+						"type": "MSI",
+						"resource": "https://vault.azure.net"
+					}
+				}
+			},
+			{
+				"name": "Set appSecretToken",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "GetAppSecretToken",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "appSecretToken",
+					"value": {
+						"value": "@activity('GetAppSecretToken').output.value",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "HttpToken",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "Set appSecretToken",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": true,
+					"secureInput": true
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": "https://login.microsoftonline.com/0a25214f-ee52-483c-b96b-dc79f3227a6f/oauth2/v2.0/token",
+					"method": "POST",
+					"headers": {
+						"Content-Type": "application/x-www-form-urlencoded"
+					},
+					"body": {
+						"value": "@concat('client_id=', variables('appIdToken'), '&client_secret=',  encodeUriComponent(variables('appSecretToken')), '&grant_type=client_credentials&scope=https://graph.microsoft.com/.default')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set httpToken",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "HttpToken",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "httpToken",
+					"value": {
+						"value": "@activity('HttpToken').output.access_token",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "OperationaLogErrorGetGovernanceMetadata",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "GetGovernanceMetadata",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "OperationalLogPipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"nivel": "ERROR",
+						"modulo": "INGESTION_FILERECEIVER",
+						"pipelineName": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"logType": "END",
+						"applicationName": {
+							"value": "@{split(pipeline().parameters.p_folder_path, '/')[2]}",
+							"type": "Expression"
+						},
+						"dataDate": {
+							"value": "@variables('dataDate')",
+							"type": "Expression"
+						},
+						"datasetName": {
+							"value": "@{split(pipeline().parameters.p_folder_path, '/')[4]}",
+							"type": "Expression"
+						},
+						"region": {
+							"value": "@{split(pipeline().parameters.p_folder_path, '/')[3]}",
+							"type": "Expression"
+						},
+						"message": {
+							"value": "@concat('GetGovernanceMetadata: ', activity('GetGovernanceMetadata').error.message)",
+							"type": "Expression"
+						},
+						"sourceType": {
+							"value": "@pipeline().parameters.sourceType",
+							"type": "Expression"
+						},
+						"uid": {
+							"value": "@variables('uid')",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "OperationaLogErrorIterate",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "If Condition Structured",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "OperationalLogPipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"nivel": "ERROR",
+						"modulo": "INGESTION_FILERECEIVER",
+						"pipelineName": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"logType": "END",
+						"applicationName": {
+							"value": "@{split(pipeline().parameters.p_folder_path, '/')[2]}",
+							"type": "Expression"
+						},
+						"dataDate": {
+							"value": "@variables('dataDate')",
+							"type": "Expression"
+						},
+						"datasetName": {
+							"value": "@{split(pipeline().parameters.p_folder_path, '/')[4]}",
+							"type": "Expression"
+						},
+						"region": {
+							"value": "@{split(pipeline().parameters.p_folder_path, '/')[3]}",
+							"type": "Expression"
+						},
+						"message": {
+							"value": "@concat('If Condition Structured', activity('If Condition Structured').error.message)",
+							"type": "Expression"
+						},
+						"sourceType": {
+							"value": "@pipeline().parameters.sourceType",
+							"type": "Expression"
+						},
+						"uid": {
+							"value": "@variables('uid')",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "Set mock",
+				"description": "Mock value is 'false' if metadata is empty.",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "GetMetadata",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "mock",
+					"value": {
+						"value": "@IF(equals(activity('GetMetadata').output.count,0),\n'false',\nstring(activity('GetMetadata').output.value[0].mock))",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "OperationaLogStart",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "OperationalLogPipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": false,
+					"parameters": {
+						"nivel": "INFO",
+						"modulo": "INGESTION_FILERECEIVER",
+						"pipelineName": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"logType": "START",
+						"applicationName": {
+							"value": "@{split(pipeline().parameters.p_folder_path, '/')[2]}",
+							"type": "Expression"
+						},
+						"dataDate": {
+							"value": "@variables('dataDate')",
+							"type": "Expression"
+						},
+						"datasetName": {
+							"value": "@{split(pipeline().parameters.p_folder_path, '/')[4]}",
+							"type": "Expression"
+						},
+						"region": {
+							"value": "@{split(pipeline().parameters.p_folder_path, '/')[3]}",
+							"type": "Expression"
+						},
+						"sourceType": {
+							"value": "@pipeline().parameters.sourceType",
+							"type": "Expression"
+						},
+						"uid": {
+							"value": "@variables('uid')",
+							"type": "Expression"
+						}
+					}
+				}
+			}
+		],
+		"parameters": {
+			"p_folder_path": {
+				"type": "String",
+				"defaultValue": "staging/external/IA_COM_VENTAS_DIRECTAS/ESP/calendario_festivos/"
+			},
+			"p_file_name": {
+				"type": "String",
+				"defaultValue": "calendario_festivos--20200518.xlsx"
+			},
+			"parentUid": {
+				"type": "string"
+			},
+			"ts": {
+				"type": "string"
+			},
+			"sourceType": {
+				"type": "string",
+				"defaultValue": "file_receiver"
+			},
+			"package": {
+				"type": "string",
+				"defaultValue": "*"
+			}
+		},
+		"variables": {
+			"uid": {
+				"type": "String",
+				"defaultValue": "@concat('INGESTION_FILERECEIVER#$',  split(pipeline().parameters.p_folder_path, '/')[2],'$_', split(pipeline().parameters.p_folder_path, '/')[3],'_', split(pipeline().parameters.p_folder_path, '/')[4],'#', concat(substring(split(split(pipeline().parameters.p_file_name, '--')[1],'.')[0],0,4),'/',substring(split(split(pipeline().parameters.p_file_name, '--')[1],'.')[0],4,2),'/',substring(split(split(pipeline().parameters.p_file_name, '--')[1],'.')[0],6,2)),'#', formatDateTime(utcnow(),'yyyyMMddHHmmssfff'))"
+			},
+			"dataDate": {
+				"type": "String",
+				"defaultValue": "@concat(substring(split(split(pipeline().parameters.p_file_name, '--')[1],'.')[0],0,4),'/',substring(split(split(pipeline().parameters.p_file_name, '--')[1],'.')[0],4,2),'/',substring(split(split(pipeline().parameters.p_file_name, '--')[1],'.')[0],6,2))"
+			},
+			"appIdToken": {
+				"type": "String"
+			},
+			"appSecretToken": {
+				"type": "String"
+			},
+			"httpToken": {
+				"type": "String"
+			},
+			"mock": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "ingestion"
+		},
+		"annotations": []
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

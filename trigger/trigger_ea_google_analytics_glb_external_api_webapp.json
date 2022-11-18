@@ -1,0 +1,40 @@
+{
+	"name": "trigger_ea_google_analytics_glb_external_api_webapp",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "ExternalAPIAzureFunctionPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "EA_Google_Analytics",
+					"region": "GLB",
+					"is_interval": false,
+					"package": "Google_Analytics_Webapp",
+					"mock": "false",
+					"is_durable": false
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2021-11-10T07:45:00",
+				"timeZone": "Romance Standard Time",
+				"schedule": {
+					"minutes": [
+						0
+					],
+					"hours": [
+						6
+					]
+				}
+			}
+		}
+	}
+}

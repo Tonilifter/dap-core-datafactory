@@ -1,0 +1,29 @@
+{
+	"name": "trigger_ia_techlab_pi_streaming_esp_eh",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "IngestionStreamingPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "IA_TECHLAB_PI",
+					"region": "ESP",
+					"mock": "true"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Hour",
+				"interval": 1,
+				"startTime": "2021-11-22T11:30:00",
+				"timeZone": "Romance Standard Time"
+			}
+		}
+	}
+}

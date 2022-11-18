@@ -1,0 +1,40 @@
+{
+	"name": "trigger_ap_eyp_pms_nor_oracle",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "OraclePipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "AP_EYP_PMS",
+					"region": "NOR",
+					"is_interval": true,
+					"sourceType": "db",
+					"mock": "false",
+					"package": "ENERGY COMPONENT - NORUEGA"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2021-08-05T07:21:00Z",
+				"timeZone": "UTC",
+				"schedule": {
+					"minutes": [
+						0
+					],
+					"hours": [
+						2
+					]
+				}
+			}
+		}
+	}
+}

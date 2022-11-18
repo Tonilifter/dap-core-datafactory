@@ -1,0 +1,39 @@
+{
+	"name": "trigger_ap_corp_saas_workday_glb_departamental",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "DepartamentalStructuredFolderPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "AP_CORP_SAAS_WORKDAY",
+					"region": "GLB",
+					"sourceType": "file",
+					"package": "WORKDAY_CORPORATE",
+					"mock": "false"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2020-08-14T10:27:00Z",
+				"timeZone": "UTC",
+				"schedule": {
+					"minutes": [
+						0
+					],
+					"hours": [
+						5
+					]
+				}
+			}
+		}
+	}
+}

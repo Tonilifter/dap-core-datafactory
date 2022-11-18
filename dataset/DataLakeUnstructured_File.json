@@ -1,0 +1,42 @@
+{
+	"name": "DataLakeUnstructured_File",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "AzureDataLakeStoreLinkedService",
+			"type": "LinkedServiceReference",
+			"parameters": {
+				"p_dl_name": {
+					"value": "@dataset().p_dl_name",
+					"type": "Expression"
+				}
+			}
+		},
+		"parameters": {
+			"p_folder_path": {
+				"type": "string"
+			},
+			"p_file_name": {
+				"type": "string"
+			},
+			"p_dl_name": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "extraction/files"
+		},
+		"annotations": [],
+		"type": "AzureDataLakeStoreFile",
+		"typeProperties": {
+			"fileName": {
+				"value": "@dataset().p_file_name",
+				"type": "Expression"
+			},
+			"folderPath": {
+				"value": "@dataset().p_folder_path",
+				"type": "Expression"
+			}
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

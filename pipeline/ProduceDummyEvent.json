@@ -1,0 +1,100 @@
+{
+	"name": "ProduceDummyEvent",
+	"properties": {
+		"activities": [
+			{
+				"name": "LogEndEvent",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "OperationalLogPipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": false,
+					"parameters": {
+						"nivel": "INFO",
+						"modulo": "ORCHESTRATOR_PRODUCER_DUMMY",
+						"pipelineName": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"logType": "END",
+						"applicationName": {
+							"value": "AP_ORCH_DUMMY",
+							"type": "Expression"
+						},
+						"dataDate": {
+							"value": "@variables('date')",
+							"type": "Expression"
+						},
+						"region": {
+							"value": "ESP",
+							"type": "Expression"
+						},
+						"sourceType": {
+							"value": "db",
+							"type": "Expression"
+						},
+						"uid": {
+							"value": "@variables('uid')",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "WaitRun",
+				"description": "Waiting to Orchestrator in order to execute dummy process",
+				"type": "Wait",
+				"dependsOn": [
+					{
+						"activity": "LogEndEvent",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"waitTimeInSeconds": 300
+				}
+			},
+			{
+				"name": "CheckOrchestrator",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "WaitRun",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "CheckOrchestrator",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			}
+		],
+		"variables": {
+			"date": {
+				"type": "String",
+				"defaultValue": "@formatDateTime(utcNow(), 'yyyy/MM/dd')"
+			},
+			"uid": {
+				"type": "String",
+				"defaultValue": "@concat('ORCHESTRATOR_PRODUCER_DUMMY#$','AP_ORCH_DUMMY','$_','ESP','#',formatDateTime(utcNow(), 'yyyy/MM/dd'),'#',utcnow('yyyyMMddHHmmssfff'))"
+			}
+		},
+		"folder": {
+			"name": "utils"
+		},
+		"annotations": []
+	}
+}

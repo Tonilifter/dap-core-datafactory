@@ -1,0 +1,43 @@
+{
+	"name": "trigger_ps_noaa_gfs_esp_external_api",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "ExternalAPIAzureFunctionPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "PS_NOAA_GFS",
+					"region": "ESP",
+					"is_interval": false,
+					"referenceDate": "@formatDateTime(convertFromUtc(trigger().startTime, 'UTC'),'yyyy/MM/dd')",
+					"sourceType": "external_api",
+					"package": "GLOBAL_FORECAST_SYSTEM",
+					"mock": "false",
+					"is_durable": true
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2022-01-01T00:00:01Z",
+				"timeZone": "UTC",
+				"schedule": {
+					"minutes": [
+						0
+					],
+					"hours": [
+						8,
+						16
+					]
+				}
+			}
+		}
+	}
+}

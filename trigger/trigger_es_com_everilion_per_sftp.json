@@ -1,0 +1,30 @@
+{
+	"name": "trigger_es_com_everilion_per_sftp",
+	"properties": {
+		"description": "SFTP File Pricing Peru",
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "FilesPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "ES_COM_EVERILION",
+					"region": "PER",
+					"mock": "false"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2020-10-15T12:00:00",
+				"timeZone": "Romance Standard Time"
+			}
+		}
+	}
+}

@@ -1,0 +1,277 @@
+{
+	"name": "CopyToSilverRequested",
+	"properties": {
+		"activities": [
+			{
+				"name": "CopyData",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "OperationaLogStart",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "BinarySource",
+						"storeSettings": {
+							"type": "AzureDataLakeStoreReadSettings",
+							"recursive": true,
+							"deleteFilesAfterCompletion": false
+						},
+						"formatSettings": {
+							"type": "BinaryReadSettings"
+						}
+					},
+					"sink": {
+						"type": "BinarySink",
+						"storeSettings": {
+							"type": "AzureDataLakeStoreWriteSettings"
+						}
+					},
+					"enableStaging": false
+				},
+				"inputs": [
+					{
+						"referenceName": "DatalakeBinaryCopyGobSource",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_dl_name": {
+								"value": "@variables('p_dl_name')",
+								"type": "Expression"
+							},
+							"layer": {
+								"value": "@pipeline().parameters.layer",
+								"type": "Expression"
+							},
+							"app": {
+								"value": "@pipeline().parameters.app",
+								"type": "Expression"
+							},
+							"region": {
+								"value": "@variables('region')",
+								"type": "Expression"
+							},
+							"dataset": {
+								"value": "@variables('dataset')",
+								"type": "Expression"
+							},
+							"source_type": {
+								"value": "@pipeline().parameters.source_type",
+								"type": "Expression"
+							}
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "DatalakeBinaryCopyGobSink",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_dl_name": {
+								"value": "@variables('p_dl_name')",
+								"type": "Expression"
+							},
+							"layer": {
+								"value": "@pipeline().parameters.layer",
+								"type": "Expression"
+							},
+							"app": {
+								"value": "@pipeline().parameters.app",
+								"type": "Expression"
+							},
+							"region": {
+								"value": "@variables('region')",
+								"type": "Expression"
+							},
+							"dataset": {
+								"value": "@variables('dataset')",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "OperationaLogStart",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "OperationalLogPipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": false,
+					"parameters": {
+						"nivel": "INFO",
+						"modulo": "COPY_TO_SILVER",
+						"pipelineName": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"logType": "START",
+						"applicationName": {
+							"value": "@pipeline().parameters.app",
+							"type": "Expression"
+						},
+						"region": {
+							"value": "@pipeline().parameters.region",
+							"type": "Expression"
+						},
+						"uid": {
+							"value": "@variables('uid')",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "OperationaLogEnd",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "CopyData",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "OperationalLogPipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"nivel": "INFO",
+						"modulo": "COPY_TO_SILVER",
+						"pipelineName": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"logType": "END",
+						"applicationName": {
+							"value": "@pipeline().parameters.app",
+							"type": "Expression"
+						},
+						"datasetName": {
+							"value": "@variables('dataset')",
+							"type": "Expression"
+						},
+						"region": {
+							"value": "@pipeline().parameters.region",
+							"type": "Expression"
+						},
+						"uid": {
+							"value": "@variables('uid')",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "OperationaLogErrorCopy",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "CopyData",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "OperationalLogPipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"nivel": "ERROR",
+						"modulo": "COPY_TO_SILVER",
+						"pipelineName": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"logType": "END",
+						"applicationName": {
+							"value": "@pipeline().parameters.app",
+							"type": "Expression"
+						},
+						"datasetName": {
+							"value": "@variables('dataset')",
+							"type": "Expression"
+						},
+						"region": {
+							"value": "@pipeline().parameters.region",
+							"type": "Expression"
+						},
+						"message": {
+							"value": "@concat('CopyData: ', activity('CopyData').error.message)",
+							"type": "Expression"
+						},
+						"uid": {
+							"value": "@variables('uid')",
+							"type": "Expression"
+						}
+					}
+				}
+			}
+		],
+		"parameters": {
+			"business_unit": {
+				"type": "string"
+			},
+			"layer": {
+				"type": "string"
+			},
+			"app": {
+				"type": "string"
+			},
+			"region": {
+				"type": "string"
+			},
+			"dataset": {
+				"type": "string"
+			},
+			"source_type": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"p_dl_name": {
+				"type": "String",
+				"defaultValue": "@{concat(replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), pipeline().parameters.business_unit, 'dapdls')}"
+			},
+			"dataset": {
+				"type": "String",
+				"defaultValue": "@if(empty(pipeline().parameters.dataset), '', pipeline().parameters.dataset)"
+			},
+			"region": {
+				"type": "String",
+				"defaultValue": "@if(empty(pipeline().parameters.region), 'null', pipeline().parameters.region)"
+			},
+			"uid": {
+				"type": "String",
+				"defaultValue": "@concat('COPY_TO_SILVER#$',pipeline().parameters.app,'$_',pipeline().parameters.region,'_',pipeline().parameters.dataset, '#', utcnow('yyyy/MM/dd'), '#', utcnow('yyyyMMddHHmmssfff'))"
+			}
+		},
+		"folder": {
+			"name": "utils"
+		},
+		"annotations": []
+	}
+}

@@ -1,0 +1,38 @@
+{
+	"name": "DatalakeArchiverSourceDataset",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "AzureDataLakeStoreLinkedService",
+			"type": "LinkedServiceReference",
+			"parameters": {
+				"p_dl_name": {
+					"value": "@dataset().dl_name",
+					"type": "Expression"
+				}
+			}
+		},
+		"parameters": {
+			"dl_name": {
+				"type": "string"
+			},
+			"root_folder": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "archiver"
+		},
+		"annotations": [],
+		"type": "Binary",
+		"typeProperties": {
+			"location": {
+				"type": "AzureDataLakeStoreLocation",
+				"folderPath": {
+					"value": "@dataset().root_folder",
+					"type": "Expression"
+				}
+			}
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

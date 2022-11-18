@@ -1,0 +1,75 @@
+{
+	"name": "trigger_ap_ref_pi_esp_scmjv01pi_raw",
+	"properties": {
+		"description": "Trigger 5m brutos Cartagena",
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "PISystemProcessPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "AP_REF_PI",
+					"region": "ESP",
+					"piServer": "SCMJV01PI",
+					"mode": "raw",
+					"interval": "5m",
+					"historicalExecution": false
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2020-04-22T00:00:00",
+				"timeZone": "Romance Standard Time",
+				"schedule": {
+					"minutes": [
+						2,
+						7,
+						12,
+						17,
+						22,
+						27,
+						32,
+						37,
+						42,
+						47,
+						52,
+						57
+					],
+					"hours": [
+						0,
+						1,
+						2,
+						3,
+						4,
+						5,
+						6,
+						7,
+						8,
+						9,
+						10,
+						11,
+						12,
+						13,
+						14,
+						15,
+						16,
+						17,
+						18,
+						19,
+						20,
+						21,
+						22,
+						23
+					]
+				}
+			}
+		}
+	}
+}

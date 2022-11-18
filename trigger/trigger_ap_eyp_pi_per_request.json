@@ -1,0 +1,27 @@
+{
+	"name": "trigger_ap_eyp_pi_per_request",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "PISystemBackfillingPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"pi_server": "PECUZ1WPPAF001"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Hour",
+				"interval": 1,
+				"startTime": "2021-12-02T12:00:00Z",
+				"timeZone": "UTC"
+			}
+		}
+	}
+}

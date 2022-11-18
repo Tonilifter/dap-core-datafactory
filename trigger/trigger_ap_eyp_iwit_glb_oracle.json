@@ -1,0 +1,40 @@
+{
+	"name": "trigger_ap_eyp_iwit_glb_oracle",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "OraclePipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "AP_EYP_IWIT",
+					"region": "GLB",
+					"is_interval": false,
+					"sourceType": "db",
+					"mock": "false",
+					"package": "*"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2021-03-03T16:22:00Z",
+				"timeZone": "UTC",
+				"schedule": {
+					"minutes": [
+						0
+					],
+					"hours": [
+						2
+					]
+				}
+			}
+		}
+	}
+}

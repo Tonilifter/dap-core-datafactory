@@ -1,0 +1,32 @@
+{
+	"name": "trigger_ap_ref_pi_esp_sstar03pi10_fillgaps_raw_1h",
+	"properties": {
+		"description": "Trigger rellenado huecos brutos horarios Tarragona",
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "PISystemFillGapsPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "AP_REF_PI",
+					"region": "ESP",
+					"piServer": "SSTAR03PI10",
+					"mode": "raw",
+					"interval": "1h"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Hour",
+				"interval": 4,
+				"startTime": "2020-11-24T15:35:00",
+				"timeZone": "Romance Standard Time"
+			}
+		}
+	}
+}

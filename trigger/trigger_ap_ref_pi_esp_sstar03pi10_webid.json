@@ -1,0 +1,30 @@
+{
+	"name": "trigger_ap_ref_pi_esp_sstar03pi10_webid",
+	"properties": {
+		"description": "TARRAGONA-SSTAR03PI10",
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "PISystemGetWebIDPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "AP_REF_PI",
+					"region": "ESP",
+					"piServer": "SSTAR03PI10"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Hour",
+				"interval": 1,
+				"startTime": "2020-05-12T08:37:00",
+				"timeZone": "Romance Standard Time"
+			}
+		}
+	}
+}

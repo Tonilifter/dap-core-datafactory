@@ -1,0 +1,30 @@
+{
+	"name": "trigger_ia_com_ems_b2b_glb_eh",
+	"properties": {
+		"description": "Ingesta de la aplicacion IA_COM_EMS_B2B",
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "IngestionStreamingPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "IA_COM_EMS_B2B",
+					"region": "GLB",
+					"mock": "false"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Hour",
+				"interval": 1,
+				"startTime": "2021-08-02T11:29:00Z",
+				"timeZone": "UTC"
+			}
+		}
+	}
+}

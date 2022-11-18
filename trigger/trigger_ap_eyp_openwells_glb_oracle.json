@@ -1,0 +1,39 @@
+{
+	"name": "trigger_ap_eyp_openwells_glb_oracle",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Started",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "OraclePipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "AP_EYP_OPENWELLS",
+					"region": "GLB",
+					"is_interval": true,
+					"mock": "false",
+					"package": "EYP_OPENWELLS"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2019-05-14T01:00:00Z",
+				"timeZone": "UTC",
+				"schedule": {
+					"minutes": [
+						30
+					],
+					"hours": [
+						1
+					]
+				}
+			}
+		}
+	}
+}

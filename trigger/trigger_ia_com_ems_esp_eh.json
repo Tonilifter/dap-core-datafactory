@@ -1,0 +1,30 @@
+{
+	"name": "trigger_ia_com_ems_esp_eh",
+	"properties": {
+		"description": "Ingesta de la aplicacion IA_COM_EMS en region ESP",
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "IngestionStreamingPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "IA_COM_EMS",
+					"region": "ESP",
+					"mock": "false"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Minute",
+				"interval": 15,
+				"startTime": "2021-08-02T11:30:00Z",
+				"timeZone": "UTC"
+			}
+		}
+	}
+}

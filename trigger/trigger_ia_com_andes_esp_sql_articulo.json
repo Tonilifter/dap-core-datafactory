@@ -1,0 +1,48 @@
+{
+	"name": "trigger_ia_com_andes_esp_sql_articulo",
+	"properties": {
+		"description": "Daily trigger for Pan Caliente - Articulo data extraction",
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "SQLServerPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "IA_COM_ANDES",
+					"region": "ESP",
+					"is_interval": false,
+					"sourceType": "db",
+					"mock": "false",
+					"package": "ANDES_DB_ARTICULO"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Week",
+				"interval": 1,
+				"startTime": "2021-05-25T14:24:00",
+				"timeZone": "Romance Standard Time",
+				"schedule": {
+					"minutes": [
+						0
+					],
+					"hours": [
+						20
+					],
+					"weekDays": [
+						"Monday",
+						"Tuesday",
+						"Wednesday",
+						"Thursday",
+						"Friday"
+					]
+				}
+			}
+		}
+	}
+}

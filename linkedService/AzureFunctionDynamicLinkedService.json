@@ -1,0 +1,28 @@
+{
+	"name": "AzureFunctionDynamicLinkedService",
+	"properties": {
+		"type": "AzureFunction",
+		"annotations": [],
+		"typeProperties": {
+			"functionAppUrl": "https://@{linkedService().functionAppUrl}.azurewebsites.net",
+			"functionKey": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "KeyVaultLinkedService",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": "@{linkedService().functionKey}"
+			}
+		},
+		"parameters": {
+			"functionAppUrl": {
+				"type": "String",
+				"defaultValue": "@pipeline().parameters.functionAppUrl"
+			},
+			"functionKey": {
+				"type": "String",
+				"defaultValue": "@pipeline().parameters.functionKey"
+			}
+		}
+	}
+}

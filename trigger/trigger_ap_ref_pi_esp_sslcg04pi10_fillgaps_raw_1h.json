@@ -1,0 +1,32 @@
+{
+	"name": "trigger_ap_ref_pi_esp_sslcg04pi10_fillgaps_raw_1h",
+	"properties": {
+		"description": "Trigger rellenado huecos brutos horarios Coruña",
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "PISystemFillGapsPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "AP_REF_PI",
+					"region": "ESP",
+					"piServer": "SSLCG04PI10",
+					"mode": "raw",
+					"interval": "1h"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Hour",
+				"interval": 4,
+				"startTime": "2020-11-24T15:28:00",
+				"timeZone": "Romance Standard Time"
+			}
+		}
+	}
+}

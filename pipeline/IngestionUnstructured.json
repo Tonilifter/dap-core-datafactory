@@ -1,0 +1,276 @@
+{
+	"name": "IngestionUnstructured",
+	"properties": {
+		"activities": [
+			{
+				"name": "bs_landing_unestructured_to_dl",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "OperationaLogStart",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "BlobSource",
+						"recursive": true
+					},
+					"sink": {
+						"type": "AzureDataLakeStoreSink"
+					},
+					"enableStaging": false
+				},
+				"inputs": [
+					{
+						"referenceName": "BlobStorageTriggerDataSet",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_folder_path": {
+								"value": "@concat(pipeline().parameters.p_folder_path, pipeline().parameters.p_timestamp)",
+								"type": "Expression"
+							},
+							"p_file_name": "@pipeline().parameters.p_file_name",
+							"businessUnit": "@pipeline().parameters.p_bu_unit",
+							"landingType": "sl"
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "DataLakeUnstructuredDataSet",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_folder_path": "@{concat('unstructured', substring(pipeline().parameters.p_folder_path, length('staging-unstructured'), sub(length(pipeline().parameters.p_folder_path), length('staging-unstructured'))))}",
+							"p_file_name": {
+								"value": "@if(endswith(pipeline().parameters.p_file_name, '.xlsx'), \nreplace(pipeline().parameters.p_file_name, '.xlsx', concat('_', pipeline().parameters.p_timestamp, '.xlsx')), pipeline().parameters.p_file_name)\n",
+								"type": "Expression"
+							},
+							"p_dl_name": {
+								"value": "@pipeline().parameters.p_dl_name",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "delete_bs_landing_file",
+				"type": "Delete",
+				"dependsOn": [
+					{
+						"activity": "bs_landing_unestructured_to_dl",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "BlobStorageTriggerDataSet",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_folder_path": "@pipeline().parameters.p_folder_path",
+							"p_file_name": "@pipeline().parameters.p_file_name",
+							"businessUnit": "@pipeline().parameters.p_bu_unit",
+							"landingType": "sl"
+						}
+					},
+					"enableLogging": false
+				}
+			},
+			{
+				"name": "SendMailError",
+				"type": "AzureFunctionActivity",
+				"dependsOn": [
+					{
+						"activity": "delete_bs_landing_file",
+						"dependencyConditions": [
+							"Failed"
+						]
+					},
+					{
+						"activity": "bs_landing_unestructured_to_dl",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"functionName": "SendMailAlert",
+					"method": "POST",
+					"body": {
+						"value": "@json(concat(concat('{\"pipeline_name\": \"', pipeline().Pipeline), '\", \"status\": \"error\"}'))",
+						"type": "Expression"
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "AzureFunctionSendAlert",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "OperationaLogStart",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "OperationalLogPipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": false,
+					"parameters": {
+						"nivel": "INFO",
+						"modulo": "INGESTION_UNSTRUCTURED",
+						"pipelineName": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"logType": "START",
+						"uid": {
+							"value": "@variables('uid')",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "OperationaLogEnd",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "delete_bs_landing_file",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "OperationalLogPipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": false,
+					"parameters": {
+						"nivel": "INFO",
+						"modulo": "INGESTION_UNSTRUCTURED",
+						"pipelineName": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"logType": "END",
+						"dataDate": {
+							"value": "@concat(split(pipeline().parameters.p_folder_path, '/')[5], '/', split(pipeline().parameters.p_folder_path, '/')[6], '/' ,split(pipeline().parameters.p_folder_path, '/')[7])",
+							"type": "Expression"
+						},
+						"uid": {
+							"value": "@variables('uid')",
+							"type": "Expression"
+						},
+						"datasetIn": {
+							"value": "@array(concat('{\"NAME\":\"', split(pipeline().parameters.p_folder_path,'/')[4], '\",\"PATH\":\"wasbs://staging-unstructured@', replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), 'sa', pipeline().parameters.p_bu_unit, 'sl.blob.core.windows.net', replace(pipeline().parameters.p_folder_path, 'staging-unstructured', ''), pipeline().parameters.p_file_name,'\",\"NUM_ITEMS\":\"', activity('bs_landing_unestructured_to_dl').output.dataRead,'\"}'))",
+							"type": "Expression"
+						},
+						"datasetOut": {
+							"value": "@array(concat('{\"NAME\":\"', split(pipeline().parameters.p_folder_path,'/')[4], '\",\"PATH\":\"adl://', pipeline().parameters.p_dl_name, '.azuredatalakestore.net/', replace(pipeline().parameters.p_folder_path, 'staging-unstructured', 'unstructured'), pipeline().parameters.p_file_name,'\",\"NUM_ITEMS\":\"', activity('bs_landing_unestructured_to_dl').output.dataWritten,'\"}'))",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "OperationaLogErrorCopy",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "bs_landing_unestructured_to_dl",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "OperationalLogPipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"nivel": "ERROR",
+						"modulo": "INGESTION_UNSTRUCTURED",
+						"pipelineName": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"logType": "END",
+						"message": {
+							"value": "@concat('bs_landing_unestructured_to_dl ', activity('bs_landing_unestructured_to_dl').error.message)",
+							"type": "Expression"
+						},
+						"uid": {
+							"value": "@variables('uid')",
+							"type": "Expression"
+						}
+					}
+				}
+			}
+		],
+		"parameters": {
+			"p_folder_path": {
+				"type": "String"
+			},
+			"p_file_name": {
+				"type": "String"
+			},
+			"p_dl_name": {
+				"type": "String"
+			},
+			"p_bu_unit": {
+				"type": "string"
+			},
+			"p_timestamp": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"uid": {
+				"type": "String",
+				"defaultValue": "@concat('INGESTION_UNSTRUCTURED#',  split(pipeline().parameters.p_folder_path, '/')[2],'_', split(pipeline().parameters.p_folder_path, '/')[3],'_', split(pipeline().parameters.p_folder_path, '/')[4],'#', split(pipeline().parameters.p_folder_path, '/')[5], '/', split(pipeline().parameters.p_folder_path, '/')[6], '/', split(pipeline().parameters.p_folder_path, '/')[7],'#', pipeline().parameters.p_timestamp)"
+			}
+		},
+		"folder": {
+			"name": "ingestion"
+		},
+		"annotations": []
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

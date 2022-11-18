@@ -1,0 +1,430 @@
+{
+	"name": "DatalakeArchiverGetModifiedFoldersPipeline",
+	"properties": {
+		"activities": [
+			{
+				"name": "IterateRootFolders",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Set appSecretToken",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@split(pipeline().parameters.rootFolders, ',')",
+						"type": "Expression"
+					},
+					"isSequential": false,
+					"batchCount": 5,
+					"activities": [
+						{
+							"name": "GetModifiedFiles",
+							"type": "Copy",
+							"dependsOn": [
+								{
+									"activity": "Set httpToken",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "BinarySource",
+									"storeSettings": {
+										"type": "AzureDataLakeStoreReadSettings",
+										"recursive": true,
+										"modifiedDatetimeStart": {
+											"value": "@pipeline().parameters.deltaStart",
+											"type": "Expression"
+										},
+										"modifiedDatetimeEnd": {
+											"value": "@pipeline().parameters.deltaEnd",
+											"type": "Expression"
+										},
+										"deleteFilesAfterCompletion": false
+									},
+									"formatSettings": {
+										"type": "BinaryReadSettings"
+									}
+								},
+								"sink": {
+									"type": "BinarySink",
+									"storeSettings": {
+										"type": "AzureBlobFSWriteSettings",
+										"copyBehavior": "PreserveHierarchy"
+									}
+								},
+								"enableStaging": false
+							},
+							"inputs": [
+								{
+									"referenceName": "DatalakeArchiverSourceDataset",
+									"type": "DatasetReference",
+									"parameters": {
+										"dl_name": {
+											"value": "@concat(replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), pipeline().parameters.businessUnit, 'dapdls')",
+											"type": "Expression"
+										},
+										"root_folder": {
+											"value": "@item()",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "DatalakeArchiverSinkDataset",
+									"type": "DatasetReference",
+									"parameters": {
+										"datalakeContainer": {
+											"value": "@pipeline().parameters.businessUnit",
+											"type": "Expression"
+										},
+										"datalakeRootFolder": {
+											"value": "archiver_process_@{item()}/@{variables('archiverProcessTimestamp')}",
+											"type": "Expression"
+										},
+										"datalakeName": {
+											"value": "@concat(replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), 'dlar')",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						},
+						{
+							"name": "HttpToken",
+							"type": "WebActivity",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": true,
+								"secureInput": true
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"url": "https://login.microsoftonline.com/0a25214f-ee52-483c-b96b-dc79f3227a6f/oauth2/v2.0/token",
+								"method": "POST",
+								"headers": {
+									"Content-Type": "application/x-www-form-urlencoded"
+								},
+								"body": {
+									"value": "@concat('client_id=', variables('appIdToken'), '&client_secret=',  encodeUriComponent(variables('appSecretToken')), '&grant_type=client_credentials&scope=https://graph.microsoft.com/.default')",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Set httpToken",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "HttpToken",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "httpToken",
+								"value": {
+									"value": "@activity('HttpToken').output.access_token",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "IfSourceData",
+							"type": "IfCondition",
+							"dependsOn": [
+								{
+									"activity": "GetModifiedFiles",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@greater(activity('GetModifiedFiles').output.dataWritten, 0)",
+									"type": "Expression"
+								},
+								"ifTrueActivities": [
+									{
+										"name": "GetModifiedFolders",
+										"type": "WebActivity",
+										"dependsOn": [],
+										"policy": {
+											"timeout": "7.00:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": true
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"url": {
+												"value": "@concat('https://coreutils', replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), 'akcore.cloudapp.repsol.com/dap-core-extraction-utils/archiver-modified-folders?business_unit=', pipeline().parameters.businessUnit, '&folder=', item(), '&timestamp=', variables('archiverProcessTimestamp'))",
+												"type": "Expression"
+											},
+											"method": "GET",
+											"headers": {
+												"Authorization": {
+													"value": "@concat('Bearer ', variables('httpToken'))",
+													"type": "Expression"
+												}
+											}
+										}
+									},
+									{
+										"name": "DatalakeArchiverCopyModifiedFolders",
+										"type": "ExecutePipeline",
+										"dependsOn": [
+											{
+												"activity": "GetModifiedFolders",
+												"dependencyConditions": [
+													"Succeeded"
+												]
+											}
+										],
+										"userProperties": [],
+										"typeProperties": {
+											"pipeline": {
+												"referenceName": "DatalakeArchiverCopyModifiedFoldersPipeline",
+												"type": "PipelineReference"
+											},
+											"waitOnCompletion": true,
+											"parameters": {
+												"modifiedFolders": {
+													"value": "@activity('GetModifiedFolders').output.folders",
+													"type": "Expression"
+												},
+												"businessUnit": {
+													"value": "@pipeline().parameters.businessUnit",
+													"type": "Expression"
+												},
+												"rootFolder": {
+													"value": "@item()",
+													"type": "Expression"
+												},
+												"copyTimestamp": {
+													"value": "@variables('copyTimestamp')",
+													"type": "Expression"
+												}
+											}
+										}
+									},
+									{
+										"name": "DeleteArchiverProcessFolder",
+										"type": "Delete",
+										"dependsOn": [
+											{
+												"activity": "DatalakeArchiverCopyModifiedFolders",
+												"dependencyConditions": [
+													"Succeeded"
+												]
+											}
+										],
+										"policy": {
+											"timeout": "7.00:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"dataset": {
+												"referenceName": "DatalakeArchiverSinkDataset",
+												"type": "DatasetReference",
+												"parameters": {
+													"datalakeContainer": {
+														"value": "@pipeline().parameters.businessUnit",
+														"type": "Expression"
+													},
+													"datalakeRootFolder": {
+														"value": "archiver_process_@{item()}/@{variables('archiverProcessTimestamp')}",
+														"type": "Expression"
+													},
+													"datalakeName": {
+														"value": "@concat(replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), 'dlar')",
+														"type": "Expression"
+													}
+												}
+											},
+											"enableLogging": false,
+											"storeSettings": {
+												"type": "AzureBlobFSReadSettings",
+												"recursive": true,
+												"enablePartitionDiscovery": false
+											}
+										}
+									}
+								]
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Set appIdToken",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "GetAppIdToken",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "appIdToken",
+					"value": {
+						"value": "@activity('GetAppIdToken').output.value",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "GetAppIdToken",
+				"type": "WebActivity",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": true,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@concat('https://', replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), 'corekv.vault.azure.net/secrets/adapp-extract-id?api-version=7.0')",
+						"type": "Expression"
+					},
+					"method": "GET",
+                                        "connectVia": {
+                                                "referenceName":"IntegrationRuntimeFreezer",
+                                                "type": "IntegrationRuntimeReference"
+                                        },
+					"authentication": {
+						"type": "MSI",
+						"resource": "https://vault.azure.net"
+					}
+				}
+			},
+			{
+				"name": "GetAppSecretToken",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "Set appIdToken",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": true,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@concat('https://', replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), 'corekv.vault.azure.net/secrets/adsp-extract-secret?api-version=7.0')",
+						"type": "Expression"
+					},
+                                        "connectVia": {
+                                                "referenceName":"IntegrationRuntimeFreezer",
+                                                "type": "IntegrationRuntimeReference"
+                                        },
+					"method": "GET",
+					"authentication": {
+						"type": "MSI",
+						"resource": "https://vault.azure.net"
+					}
+				}
+			},
+			{
+				"name": "Set appSecretToken",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "GetAppSecretToken",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "appSecretToken",
+					"value": {
+						"value": "@activity('GetAppSecretToken').output.value",
+						"type": "Expression"
+					}
+				}
+			}
+		],
+		"parameters": {
+			"deltaStart": {
+				"type": "string"
+			},
+			"deltaEnd": {
+				"type": "string"
+			},
+			"rootFolders": {
+				"type": "string"
+			},
+			"businessUnit": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"appIdToken": {
+				"type": "String"
+			},
+			"appSecretToken": {
+				"type": "String"
+			},
+			"httpToken": {
+				"type": "String"
+			},
+			"archiverProcessTimestamp": {
+				"type": "String",
+				"defaultValue": "@formatDateTime(utcNow(), 'yyyyMMddHHmmssfffffff')"
+			},
+			"copyTimestamp": {
+				"type": "String",
+				"defaultValue": "@formatDateTime(utcNow(), 'yyyyMMddHHmmss')"
+			}
+		},
+		"folder": {
+			"name": "archiver"
+		},
+		"annotations": []
+	}
+}

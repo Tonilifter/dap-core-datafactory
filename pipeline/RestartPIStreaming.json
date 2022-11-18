@@ -1,0 +1,671 @@
+{
+	"name": "RestartPIStreaming",
+	"properties": {
+		"activities": [
+			{
+				"name": "GetEHInfo",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "Set ResourceGroupName",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Set httpToken",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Set Timespan",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": true
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@concat('https://management.azure.com/subscriptions/', variables('subscriptionId'), '/resourceGroups/', variables('resourceGroupName'), '/providers/Microsoft.EventHub/namespaces/', replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), 'EHapi/providers/Microsoft.Insights/metrics?api-version=2018-01-01&metricnames=IncomingMessages&interval=PT15M&$filter=EntityName eq ''', pipeline().parameters.ehName,'''&timespan=', variables('timespan'))",
+						"type": "Expression"
+					},
+					"method": "GET",
+					"headers": {
+						"Authorization": {
+							"value": "@concat('Bearer ', variables('httpToken'))",
+							"type": "Expression"
+						}
+					},
+					"body": {
+						"value": "@trim('')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set SubscriptionId",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "GetSubscriptionId",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "subscriptionId",
+					"value": {
+						"value": "@activity('GetSubscriptionId').output.value",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "GetSubscriptionId",
+				"type": "WebActivity",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": true,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@concat('https://', replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), 'corekv.vault.azure.net/secrets/df-dap-subscription-id?api-version=7.0')",
+						"type": "Expression"
+					},
+					"method": "GET",
+					"authentication": {
+						"type": "MSI",
+						"resource": "https://vault.azure.net"
+					}
+				}
+			},
+			{
+				"name": "Set ResourceGroupName",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "GetResourceGroupName",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "resourceGroupName",
+					"value": {
+						"value": "@activity('GetResourceGroupName').output.value",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "GetResourceGroupName",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "Set SubscriptionId",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": true,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@concat('https://', replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), 'corekv.vault.azure.net/secrets/df-dap-rg-name?api-version=7.0')",
+						"type": "Expression"
+					},
+                                        "connectVia": {
+                                                "referenceName":"IntegrationRuntimeFreezer",
+                                                "type": "IntegrationRuntimeReference"
+                                        },
+					"method": "GET",
+					"authentication": {
+						"type": "MSI",
+						"resource": "https://vault.azure.net"
+					}
+				}
+			},
+			{
+				"name": "HttpToken",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "Set appSecretToken",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": true,
+					"secureInput": true
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": "https://login.microsoftonline.com/0a25214f-ee52-483c-b96b-dc79f3227a6f/oauth2/token",
+					"method": "POST",
+					"headers": {
+						"Content-Type": "application/x-www-form-urlencoded"
+					},
+					"body": {
+						"value": "@concat('client_id=', variables('appIdToken'), '&client_secret=',  encodeUriComponent(variables('appSecretToken')), '&grant_type=client_credentials&resource=https://management.azure.com')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set appIdToken",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "GetAppIdToken",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "appIdToken",
+					"value": {
+						"value": "@activity('GetAppIdToken').output.value",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "GetAppIdToken",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "OperationaLogStart",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": true,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@concat('https://', replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), 'corekv.vault.azure.net/secrets/adapp-lacore-id?api-version=7.0')",
+						"type": "Expression"
+					},
+                                        "connectVia": {
+                                                "referenceName":"IntegrationRuntimeFreezer",
+                                                "type": "IntegrationRuntimeReference"
+                                        },
+					"method": "GET",
+					"authentication": {
+						"type": "MSI",
+						"resource": "https://vault.azure.net"
+					}
+				}
+			},
+			{
+				"name": "GetAppSecretToken",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "Set appIdToken",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": true,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@concat('https://', replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), 'corekv.vault.azure.net/secrets/adsp-lacore-secret?api-version=7.0')",
+						"type": "Expression"
+					},
+                                        "connectVia": {
+                                                "referenceName":"IntegrationRuntimeFreezer",
+                                                "type": "IntegrationRuntimeReference"
+                                        },
+					"method": "GET",
+					"authentication": {
+						"type": "MSI",
+						"resource": "https://vault.azure.net"
+					}
+				}
+			},
+			{
+				"name": "Set appSecretToken",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "GetAppSecretToken",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "appSecretToken",
+					"value": {
+						"value": "@activity('GetAppSecretToken').output.value",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set httpToken",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "HttpToken",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "httpToken",
+					"value": {
+						"value": "@activity('HttpToken').output.access_token",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "If no data",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "ForEach metric",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@equals(variables('total'), '0')",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "OperationaLogEnd",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "OperationalLogPipeline",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"nivel": "INFO",
+									"modulo": "RESTART_PISTREAMING",
+									"pipelineName": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"logType": "END",
+									"applicationName": {
+										"value": "@pipeline().parameters.applicationName",
+										"type": "Expression"
+									},
+									"dataDate": {
+										"value": "@variables('referenceDate')",
+										"type": "Expression"
+									},
+									"region": {
+										"value": "@pipeline().parameters.region",
+										"type": "Expression"
+									},
+									"uid": {
+										"value": "@variables('uid')",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "GetServiceToken",
+							"type": "WebActivity",
+							"dependsOn": [
+								{
+									"activity": "Set DefinitionId",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": true,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"url": {
+									"value": "@concat('https://', replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), 'corekv.vault.azure.net/secrets/service-token-r?api-version=7.0')",
+									"type": "Expression"
+								},
+			                                        "connectVia": {
+                       			                       	  	"referenceName":"IntegrationRuntimeFreezer",
+                                       				        "type": "IntegrationRuntimeReference"
+                                        			},
+								"method": "GET",
+								"authentication": {
+									"type": "MSI",
+									"resource": "https://vault.azure.net"
+								}
+							}
+						},
+						{
+							"name": "CallRestartPipeline",
+							"type": "WebActivity",
+							"dependsOn": [
+								{
+									"activity": "GetServiceToken",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": true,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"url": "https://vsrm.dev.azure.com/repsol-digital-team/DAPlatform01/_apis/release/releases?api-version=6.0",
+								"method": "POST",
+								"headers": {
+									"Authorization": {
+										"value": "@concat('Basic ', base64(concat('SVC_DAPLATFORM@repsol.com:', activity('GetServiceToken').output.value)))",
+										"type": "Expression"
+									}
+								},
+								"body": {
+									"value": "{\"definitionId\":@{int(variables('definitionId'))}, \"variables\":{\"piserver\": {\"value\": \"@{pipeline().parameters.piserver}\"}}}",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Set DefinitionId",
+							"type": "SetVariable",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "definitionId",
+								"value": {
+									"value": "@if(endswith(pipeline().DataFactory, 'ldfcore'), '1907', if(endswith(pipeline().DataFactory, 'ddfcore'), '1907', if(endswith(pipeline().DataFactory, 'tdfcore'), '1941', if(endswith(pipeline().DataFactory, 'adfcore'), '1942', if(endswith(pipeline().DataFactory, 'pdfcore'), '1943', '')))))",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "OperationaLogEndKO",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "CallRestartPipeline",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "OperationalLogPipeline",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"nivel": "ERROR",
+									"modulo": "RESTART_PISTREAMING",
+									"pipelineName": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"logType": "END",
+									"applicationName": {
+										"value": "@pipeline().parameters.applicationName",
+										"type": "Expression"
+									},
+									"dataDate": {
+										"value": "@variables('referenceDate')",
+										"type": "Expression"
+									},
+									"region": {
+										"value": "@pipeline().parameters.region",
+										"type": "Expression"
+									},
+									"message": {
+										"value": "@concat('0 messages received in the last hour in EH ', pipeline().parameters.ehName)",
+										"type": "Expression"
+									},
+									"uid": {
+										"value": "@variables('uid')",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "ForEach metric",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "GetEHInfo",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@if(empty(activity('GetEHInfo').output.value[0].timeseries), activity('GetEHInfo').output.value[0].timeseries, activity('GetEHInfo').output.value[0].timeseries[0].data)",
+						"type": "Expression"
+					},
+					"isSequential": true,
+					"activities": [
+						{
+							"name": "Set total",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "Set partial metric",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "total",
+								"value": {
+									"value": "@variables('partial')",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Set partial metric",
+							"type": "SetVariable",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "partial",
+								"value": {
+									"value": "@string(add(int(item().total), int(variables('total'))))",
+									"type": "Expression"
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Set Timespan",
+				"type": "SetVariable",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "timespan",
+					"value": {
+						"value": "@concat(addhours(utcnow(),-1),'/',utcnow())",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "OperationaLogStart",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "OperationalLogPipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": false,
+					"parameters": {
+						"nivel": "INFO",
+						"modulo": "RESTART_PISTREAMING",
+						"pipelineName": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"logType": "START",
+						"applicationName": {
+							"value": "@pipeline().parameters.applicationName",
+							"type": "Expression"
+						},
+						"dataDate": {
+							"value": "@variables('referenceDate')",
+							"type": "Expression"
+						},
+						"region": {
+							"value": "@pipeline().parameters.region",
+							"type": "Expression"
+						},
+						"uid": {
+							"value": "@variables('uid')",
+							"type": "Expression"
+						}
+					}
+				}
+			}
+		],
+		"parameters": {
+			"ehName": {
+				"type": "string"
+			},
+			"piServer": {
+				"type": "string"
+			},
+			"applicationName": {
+				"type": "string"
+			},
+			"region": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"subscriptionId": {
+				"type": "String"
+			},
+			"resourceGroupName": {
+				"type": "String"
+			},
+			"appIdToken": {
+				"type": "String"
+			},
+			"appSecretToken": {
+				"type": "String"
+			},
+			"httpToken": {
+				"type": "String"
+			},
+			"total": {
+				"type": "String",
+				"defaultValue": "0"
+			},
+			"partial": {
+				"type": "String",
+				"defaultValue": "0"
+			},
+			"timespan": {
+				"type": "String"
+			},
+			"definitionId": {
+				"type": "String"
+			},
+			"uid": {
+				"type": "String",
+				"defaultValue": "@concat('RESTART_PISTREAMING#$', pipeline().parameters.applicationName, '$_', pipeline().parameters.region, '_', pipeline().parameters.ehName,'#',utcnow('yyyy/MM/dd'), '#', utcnow('yyyyMMddHHmmssfff'))"
+			},
+			"referenceDate": {
+				"type": "String",
+				"defaultValue": "@formatDateTime(utcnow(),'yyyy/MM/dd')"
+			}
+		},
+		"folder": {
+			"name": "extraction/pi"
+		},
+		"annotations": []
+	}
+}

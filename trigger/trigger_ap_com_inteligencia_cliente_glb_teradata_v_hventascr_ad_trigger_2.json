@@ -1,0 +1,39 @@
+{
+	"name": "trigger_ap_com_inteligencia_cliente_glb_teradata_v_hventascr_ad_trigger_2",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "TeradataCloudPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "AP_COM_INTELIGENCIA_CLIENTE",
+					"region": "GLB",
+					"is_interval": true,
+					"mock": "false",
+					"package": "pkg_v_hventascr_ad"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2021-10-22T08:10:00",
+				"timeZone": "Romance Standard Time",
+				"schedule": {
+					"minutes": [
+						10
+					],
+					"hours": [
+						8
+					]
+				}
+			}
+		}
+	}
+}

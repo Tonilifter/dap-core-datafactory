@@ -1,0 +1,28 @@
+{
+	"name": "trigger_ea_com_egas_mex_external_api",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "ExternalAPIAzureFunctionPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "EA_COM_EGAS",
+					"region": "MEX"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2020-01-30T07:00:00Z",
+				"timeZone": "UTC"
+			}
+		}
+	}
+}

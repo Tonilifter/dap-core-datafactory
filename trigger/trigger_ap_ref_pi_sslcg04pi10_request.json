@@ -1,0 +1,27 @@
+{
+	"name": "trigger_ap_ref_pi_sslcg04pi10_request",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "PISystemBackfillingPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"pi_server": "SSLCG04PI10"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Hour",
+				"interval": 1,
+				"startTime": "2021-05-31T15:00:00",
+				"timeZone": "Romance Standard Time"
+			}
+		}
+	}
+}

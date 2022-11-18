@@ -1,0 +1,30 @@
+{
+	"name": "trigger_ap_ref_pi_per_sslimlppi01_streaming",
+	"properties": {
+		"description": "Trigger horario streaming Pampilla",
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "PISystemStreamingPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "AP_REF_PI",
+					"region": "PER",
+					"piServer": "SSLIMLPPI01"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Hour",
+				"interval": 1,
+				"startTime": "2021-07-20T12:07:00",
+				"timeZone": "Romance Standard Time"
+			}
+		}
+	}
+}

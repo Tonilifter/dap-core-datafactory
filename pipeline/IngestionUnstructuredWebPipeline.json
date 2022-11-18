@@ -1,0 +1,391 @@
+{
+	"name": "IngestionUnstructuredWebPipeline",
+	"properties": {
+		"activities": [
+			{
+				"name": "CopyUnstructuredFile",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "OperationaLogStart",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "BlobSource",
+						"recursive": true
+					},
+					"sink": {
+						"type": "AzureDataLakeStoreSink"
+					},
+					"enableStaging": false
+				},
+				"inputs": [
+					{
+						"referenceName": "BlobStorageTriggerDataSet",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_folder_path": {
+								"value": "@concat('staging/', variables('source_type'), '/', pipeline().parameters.p_application_name, '/', pipeline().parameters.p_region, '/', pipeline().parameters.p_dataset_name, '/', pipeline().parameters.p_extraction_date, if(empty(pipeline().parameters.p_timestamp), '', concat('/', pipeline().parameters.p_timestamp)))",
+								"type": "Expression"
+							},
+							"p_file_name": "@pipeline().parameters.p_file_name",
+							"businessUnit": {
+								"value": "@pipeline().parameters.p_bu_unit",
+								"type": "Expression"
+							},
+							"landingType": "sl"
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "DataLakeUnstructured",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_folder_path": {
+								"value": "@concat('raw/', variables('source_type'), '/', pipeline().parameters.p_application_name, '/', pipeline().parameters.p_region, '/', pipeline().parameters.p_dataset_name, '/', concat('year=', split(pipeline().parameters.p_extraction_date, '/')[0], '/month=', split(pipeline().parameters.p_extraction_date, '/')[1], '/day=', split(pipeline().parameters.p_extraction_date, '/')[2]))",
+								"type": "Expression"
+							},
+							"p_file_name": {
+								"value": "@pipeline().parameters.p_file_name",
+								"type": "Expression"
+							},
+							"p_dl_name": {
+								"value": "@variables('dls_name')",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "OperationaLogStart",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "OperationalLogPipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"nivel": "INFO",
+						"modulo": "INGESTION_UNSTRUCTURED",
+						"pipelineName": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"logType": "START",
+						"applicationName": {
+							"value": "@pipeline().parameters.p_application_name",
+							"type": "Expression"
+						},
+						"dataDate": {
+							"value": "@pipeline().parameters.p_extraction_date",
+							"type": "Expression"
+						},
+						"datasetName": {
+							"value": "@pipeline().parameters.p_dataset_name",
+							"type": "Expression"
+						},
+						"region": {
+							"value": "@pipeline().parameters.p_region",
+							"type": "Expression"
+						},
+						"sourceType": {
+							"value": "@variables('source_type')",
+							"type": "Expression"
+						},
+						"uid": {
+							"value": "@variables('uid')",
+							"type": "Expression"
+						},
+						"parentUid": {
+							"value": "@pipeline().parameters.p_parent_uid",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "ExecuteProcessorPipeline",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "CopyUnstructuredFile",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "ProcessorPipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"applicationName": {
+							"value": "@pipeline().parameters.p_application_name",
+							"type": "Expression"
+						},
+						"region": {
+							"value": "@pipeline().parameters.p_region",
+							"type": "Expression"
+						},
+						"datasetName": {
+							"value": "@pipeline().parameters.p_dataset_name",
+							"type": "Expression"
+						},
+						"extractionDate": {
+							"value": "@pipeline().parameters.p_extraction_date",
+							"type": "Expression"
+						},
+						"ts": {
+							"value": "@pipeline().parameters.p_timestamp",
+							"type": "Expression"
+						},
+						"parentUid": {
+							"value": "@variables('uid')",
+							"type": "Expression"
+						},
+						"package": {
+							"value": "@pipeline().parameters.p_package",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "OperationaLogEnd",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "CopyUnstructuredFile",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "OperationalLogPipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"nivel": "INFO",
+						"modulo": "INGESTION_UNSTRUCTURED",
+						"pipelineName": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"logType": "END",
+						"applicationName": {
+							"value": "@pipeline().parameters.p_application_name",
+							"type": "Expression"
+						},
+						"dataDate": {
+							"value": "@pipeline().parameters.p_extraction_date",
+							"type": "Expression"
+						},
+						"datasetName": {
+							"value": "@pipeline().parameters.p_dataset_name",
+							"type": "Expression"
+						},
+						"region": {
+							"value": "@pipeline().parameters.p_region",
+							"type": "Expression"
+						},
+						"sourceType": {
+							"value": "@variables('source_type')",
+							"type": "Expression"
+						},
+						"uid": {
+							"value": "@variables('uid')",
+							"type": "Expression"
+						},
+						"parentUid": {
+							"value": "@pipeline().parameters.p_parent_uid",
+							"type": "Expression"
+						},
+						"datasetIn": {
+							"value": "@array(concat('{\"NAME\":\"', pipeline().parameters.p_dataset_name, '\",\"PATH\":\"wasbs://staging@', replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), 'sa', pipeline().parameters.p_bu_unit, 'sl.blob.core.windows.net/',  variables('source_type'), '/', pipeline().parameters.p_application_name, '/', pipeline().parameters.p_region, '/', pipeline().parameters.p_dataset_name, '/', pipeline().parameters.p_extraction_date, if(empty(pipeline().parameters.p_timestamp), '', concat('/', pipeline().parameters.p_timestamp)),'/', pipeline().parameters.p_file_name,'\",\"NUM_ITEMS\":\"', activity('CopyUnstructuredFile').output.dataRead,'\"}'))",
+							"type": "Expression"
+						},
+						"datasetOut": {
+							"value": "@array(concat('{\"NAME\":\"', pipeline().parameters.p_dataset_name, '\",\"PATH\":\"adl://', variables('dls_name'), '.azuredatalakestore.net/', 'raw/', variables('source_type'), '/', pipeline().parameters.p_application_name, '/', pipeline().parameters.p_region, '/', pipeline().parameters.p_dataset_name, '/', concat('year=', split(pipeline().parameters.p_extraction_date, '/')[0], '/month=', split(pipeline().parameters.p_extraction_date, '/')[1], '/day=', split(pipeline().parameters.p_extraction_date, '/')[2]), if(empty(pipeline().parameters.p_timestamp), '', concat('/', pipeline().parameters.p_timestamp)), '/', pipeline().parameters.p_file_name,'\",\"NUM_ITEMS\":\"', activity('CopyUnstructuredFile').output.dataWritten,'\"}'))",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "OperationaLogEndError",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "CopyUnstructuredFile",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "OperationalLogPipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"nivel": "ERROR",
+						"modulo": "INGESTION_UNSTRUCTURED",
+						"pipelineName": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"logType": "END",
+						"applicationName": {
+							"value": "@pipeline().parameters.p_application_name",
+							"type": "Expression"
+						},
+						"dataDate": {
+							"value": "@pipeline().parameters.p_extraction_date",
+							"type": "Expression"
+						},
+						"datasetName": {
+							"value": "@pipeline().parameters.p_dataset_name",
+							"type": "Expression"
+						},
+						"region": {
+							"value": "@pipeline().parameters.p_region",
+							"type": "Expression"
+						},
+						"message": {
+							"value": "@concat('CopyUnstructuredFile: ', activity('CopyUnstructuredFile').error.message)",
+							"type": "Expression"
+						},
+						"sourceType": {
+							"value": "@variables('source_type')",
+							"type": "Expression"
+						},
+						"uid": {
+							"value": "@variables('uid')",
+							"type": "Expression"
+						},
+						"parentUid": {
+							"value": "@pipeline().parameters.p_parent_uid",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "DeleteStagingFile",
+				"type": "Delete",
+				"dependsOn": [
+					{
+						"activity": "CopyUnstructuredFile",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "BlobStorageTriggerDataSet",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_folder_path": {
+								"value": "@concat('staging/', variables('source_type'), '/', pipeline().parameters.p_application_name, '/', pipeline().parameters.p_region, '/', pipeline().parameters.p_dataset_name, '/', pipeline().parameters.p_extraction_date, if(empty(pipeline().parameters.p_timestamp), '', concat('/', pipeline().parameters.p_timestamp)))",
+								"type": "Expression"
+							},
+							"p_file_name": {
+								"value": "@pipeline().parameters.p_file_name",
+								"type": "Expression"
+							},
+							"businessUnit": {
+								"value": "@pipeline().parameters.p_bu_unit",
+								"type": "Expression"
+							},
+							"landingType": "sl"
+						}
+					},
+					"enableLogging": false
+				}
+			}
+		],
+		"parameters": {
+			"p_file_name": {
+				"type": "string"
+			},
+			"p_bu_unit": {
+				"type": "string"
+			},
+			"p_timestamp": {
+				"type": "string"
+			},
+			"p_application_name": {
+				"type": "string"
+			},
+			"p_region": {
+				"type": "string"
+			},
+			"p_dataset_name": {
+				"type": "string"
+			},
+			"p_extraction_date": {
+				"type": "string"
+			},
+			"p_parent_uid": {
+				"type": "string"
+			},
+			"p_package": {
+				"type": "string",
+				"defaultValue": "*"
+			}
+		},
+		"variables": {
+			"uid": {
+				"type": "String",
+				"defaultValue": "@concat('INGESTION_UNSTRUCTURED#$', pipeline().parameters.p_application_name, '$_', pipeline().parameters.p_region, if(empty(pipeline().parameters.p_dataset_name), '', concat('_', pipeline().parameters.p_dataset_name)), '#', pipeline().parameters.p_extraction_date, '#', pipeline().parameters.p_timestamp)"
+			},
+			"source_type": {
+				"type": "String",
+				"defaultValue": "manual_files"
+			},
+			"dls_name": {
+				"type": "String",
+				"defaultValue": "@{concat(replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), pipeline().parameters.p_bu_unit, 'dapdls')}"
+			}
+		},
+		"folder": {
+			"name": "ingestion"
+		},
+		"annotations": []
+	}
+}

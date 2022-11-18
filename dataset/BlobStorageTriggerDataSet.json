@@ -1,0 +1,51 @@
+{
+	"name": "BlobStorageTriggerDataSet",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "BlobStorageLinkedService",
+			"type": "LinkedServiceReference",
+			"parameters": {
+				"businessUnit": "@dataset().businessUnit",
+				"landingType": {
+					"value": "@dataset().landingType",
+					"type": "Expression"
+				}
+			}
+		},
+		"parameters": {
+			"p_folder_path": {
+				"type": "String"
+			},
+			"p_file_name": {
+				"type": "String",
+				"defaultValue": "@pipeline().parameters.p_file_name"
+			},
+			"businessUnit": {
+				"type": "string"
+			},
+			"landingType": {
+				"type": "string",
+				"defaultValue": "il"
+			}
+		},
+		"folder": {
+			"name": "extraction/blob"
+		},
+		"annotations": [],
+		"type": "AzureBlob",
+		"typeProperties": {
+			"format": {
+				"type": "AvroFormat"
+			},
+			"fileName": {
+				"value": "@dataset().p_file_name",
+				"type": "Expression"
+			},
+			"folderPath": {
+				"value": "@dataset().p_folder_path",
+				"type": "Expression"
+			}
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

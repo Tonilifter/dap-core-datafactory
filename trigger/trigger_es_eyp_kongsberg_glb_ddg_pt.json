@@ -1,0 +1,35 @@
+{
+	"name": "trigger_es_eyp_kongsberg_glb_ddg_pt",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "DdgPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"processId": "InwellsPT-ddg"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2021-04-23T01:00:00Z",
+				"timeZone": "UTC",
+				"schedule": {
+					"minutes": [
+						0
+					],
+					"hours": [
+						1
+					]
+				}
+			}
+		}
+	}
+}

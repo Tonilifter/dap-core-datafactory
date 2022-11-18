@@ -1,0 +1,64 @@
+{
+	"name": "SalesforceLinkedService",
+	"properties": {
+		"type": "Salesforce",
+		"annotations": [],
+		"typeProperties": {
+			"environmentUrl": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "KeyVaultLinkedService",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": "@{linkedService().environmentUrl}"
+			},
+			"username": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "KeyVaultLinkedService",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": "@{linkedService().username}"
+			},
+			"password": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "KeyVaultLinkedService",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": "@{linkedService().password}"
+			},
+			"securityToken": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "KeyVaultLinkedService",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": "@{linkedService().securityToken}"
+			},
+			"apiVersion": "@{linkedService().apiVersion}"
+		},
+		"parameters": {
+			"environmentUrl": {
+				"type": "String",
+				"defaultValue": ""
+			},
+			"username": {
+				"type": "String",
+				"defaultValue": ""
+			},
+			"password": {
+				"type": "String",
+				"defaultValue": ""
+			},
+			"securityToken": {
+				"type": "String",
+				"defaultValue": ""
+			},
+			"apiVersion": {
+				"type": "String",
+				"defaultValue": "51.0"
+			}
+		}
+	}
+}

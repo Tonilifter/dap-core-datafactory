@@ -1,0 +1,62 @@
+{
+	"name": "BlobStorageBinaryLandingDataset",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "BlobStorageLinkedService",
+			"type": "LinkedServiceReference",
+			"parameters": {
+				"businessUnit": {
+					"value": "@dataset().businessUnit",
+					"type": "Expression"
+				},
+				"landingType": "@dataset().landingType"
+			}
+		},
+		"parameters": {
+			"businessUnit": {
+				"type": "string"
+			},
+			"landingType": {
+				"type": "string",
+				"defaultValue": "lan"
+			},
+			"extractionTool": {
+				"type": "string"
+			},
+			"applicationName": {
+				"type": "string"
+			},
+			"region": {
+				"type": "string"
+			},
+			"datasetName": {
+				"type": "string"
+			},
+			"date": {
+				"type": "string"
+			},
+			"format": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "extraction/blob"
+		},
+		"annotations": [],
+		"type": "Binary",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobStorageLocation",
+				"fileName": {
+					"value": "@{dataset().datasetName}.@{dataset().format}",
+					"type": "Expression"
+				},
+				"folderPath": {
+					"value": "@{dataset().extractionTool}/@{dataset().applicationName}/@{dataset().region}/@{dataset().datasetName}/@{dataset().date}",
+					"type": "Expression"
+				},
+				"container": "staging"
+			}
+		}
+	}
+}

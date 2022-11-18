@@ -1,0 +1,44 @@
+{
+	"name": "trigger_monitor_glp_data_driven",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "MonitorPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"monitorId": "PR_GLP_Data_Driven",
+					"laQuery": "let RefDate = format_datetime(todatetime('#referenceDate#') - 1d, 'yyyy/MM/dd');\nadfOperationLogs('ap_glp_nace','SQLServerPipeline','','nace/ap_glp_nace','', RefDate)\n| union adfOperationLogs('NACE_DB_COMMERCIAL_32','SQLServerPipeline','','nace/NACE_DB_COMMERCIAL_32','', RefDate)\n| union adfOperationLogs('ddg_glp_data_driven_1_1','DdgPipeline','','ddg_glp_data_driven_1_1','', RefDate)\n| union adfOperationLogs('ddg_glp_data_driven_1_2','DdgPipeline','','ddg_glp_data_driven_1_2','', RefDate)\n| union adfOperationLogs('ddg_glp_data_driven_15_1','DdgPipeline','','ddg_glp_data_driven_15_1','', RefDate)\n| union adfOperationLogs('ddg_glp_data_driven_22_1','DdgPipeline','','ddg_glp_data_driven_22_1','', RefDate)\n| union adfOperationLogs('ddg_glp_data_driven_43_1','DdgPipeline','','ddg_glp_data_driven_43_1','', RefDate)\n| union adfOperationLogs('ddg_glp_data_driven_44_1','DdgPipeline','','ddg_glp_data_driven_44_1','', RefDate)\n| union adfOperationLogs('ddg_glp_data_driven_5_1','DdgPipeline','','ddg_glp_data_driven_5_1','', RefDate)\n| union adfOperationLogs('ddg_glp_data_driven_6_1','DdgPipeline','','ddg_glp_data_driven_6_1','', RefDate)\n| union adfOperationLogs('ddg_glp_data_driven_6_2','DdgPipeline','','ddg_glp_data_driven_6_2','', RefDate)\n| union adfOperationLogs('ddg_glp_data_driven_6_3','DdgPipeline','','ddg_glp_data_driven_6_3','', RefDate)\n| union adfOperationLogs('ddg_glp_data_driven_8_1','DdgPipeline','','ddg_glp_data_driven_8_1','', RefDate)\n| union adfOperationLogs('ddg_glp_data_driven_8_2','DdgPipeline','','ddg_glp_data_driven_8_2','', RefDate)\n| union adfOperationLogs('ddg_glp_data_driven_8_3','DdgPipeline','','ddg_glp_data_driven_8_3','', RefDate)\n| union adfOperationLogs('ddg_glp_data_driven_ev','DdgPipeline','','ddg_glp_data_driven_ev','', RefDate)\n| union adfOperationLogs('AP_MDPF_SCF','FilesPipeline','','AP_MDPF_SCF/*','', RefDate)\n| union adfOperationLogs('ddg_glp_data_driven_facturas_4_1','DdgPipeline','','ddg_glp_data_driven_facturas_4_1','', RefDate)\n| union adfOperationLogs('AP_GLP_SAC_BACK_OFFICE','SQLServerPipeline','','AP_GLP_SAC_BACK_OFFICE','', RefDate)\n| union adfOperationLogs('ddg_glp_data_driven_gsac_5_1','DdgPipeline','','ddg_glp_data_driven_gsac_5_1','', RefDate)\n| union adfOperationLogs('ddg_glp_data_driven_gsac_5_2','DdgPipeline','','ddg_glp_data_driven_gsac_5_2','', RefDate)\n| union adfOperationLogs('AP_GLP_FUERZA_VENTAS','SalesforcePipeline','','AP_GLP_FUERZA_VENTAS','', RefDate)\n| union adfOperationLogs('ddg_glp_data_driven_salesforce_4_1','DdgPipeline','','ddg_glp_data_driven_salesforce_4_1','', RefDate)\n| invoke SummarizeADF()\n| invoke MonitorSummarize()",
+					"timespan": "PT24H"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Week",
+				"interval": 1,
+				"startTime": "2021-12-13T14:39:00",
+				"timeZone": "Romance Standard Time",
+				"schedule": {
+					"minutes": [
+						0
+					],
+					"hours": [
+						7
+					],
+					"weekDays": [
+						"Monday",
+						"Tuesday",
+						"Wednesday",
+						"Thursday",
+						"Friday"
+					]
+				}
+			}
+		}
+	}
+}

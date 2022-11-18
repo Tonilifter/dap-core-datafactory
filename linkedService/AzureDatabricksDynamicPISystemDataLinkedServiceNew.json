@@ -1,0 +1,63 @@
+{
+	"name": "AzureDatabricksDynamicPISystemDataLinkedServiceNew",
+	"properties": {
+		"parameters": {
+			"workers": {
+				"type": "string",
+				"defaultValue": "2:8"
+			}
+		},
+		"annotations": [],
+		"type": "AzureDatabricks",
+		"typeProperties": {
+			"domain": "https://westeurope.azuredatabricks.net",
+			"accessToken": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "KeyVaultLinkedServiceDB",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": "databricks-token"
+			},
+			"newClusterNodeType": "Standard_DS3_v2",
+			"newClusterNumOfWorker": "@linkedService().workers",
+			"newClusterSparkEnvVars": {
+				"METADATA_SCHEMA": "pitagmanager",
+				"NAMESPACE": {
+					"type": "AzureKeyVaultSecret",
+					"store": {
+						"referenceName": "KeyVaultLinkedService",
+						"type": "LinkedServiceReference"
+					},
+					"secretName": "Namespace"
+				},
+				"TENANT_ID": {
+					"type": "AzureKeyVaultSecret",
+					"store": {
+						"referenceName": "KeyVaultLinkedService",
+						"type": "LinkedServiceReference"
+					},
+					"secretName": "df-dap-tenant-id"
+				},
+				"KEY_VAULT_CLIENT_ID": {
+					"type": "AzureKeyVaultSecret",
+					"store": {
+						"referenceName": "KeyVaultLinkedService",
+						"type": "LinkedServiceReference"
+					},
+					"secretName": "adapp-kvreader-id"
+				},
+				"KEY_VAULT_SECRET": {
+					"type": "AzureKeyVaultSecret",
+					"store": {
+						"referenceName": "KeyVaultLinkedService",
+						"type": "LinkedServiceReference"
+					},
+					"secretName": "adsp-kvreader-secret"
+				},
+				"PYSPARK_PYTHON": "/databricks/python3/bin/python3"
+			},
+			"newClusterVersion": "7.4.x-scala2.12"
+		}
+	}
+}

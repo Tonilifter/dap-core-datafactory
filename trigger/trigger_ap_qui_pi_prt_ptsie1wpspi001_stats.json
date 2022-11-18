@@ -1,0 +1,40 @@
+{
+	"name": "trigger_ap_qui_pi_prt_ptsie1wpspi001_stats",
+	"properties": {
+		"description": "Trigger diario estadisticos Sines",
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "PISystemProcessPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "AP_QUI_PI",
+					"region": "PRT",
+					"piServer": "PTSIE1WPSPI001",
+					"startTime": "y",
+					"endTime": "t",
+					"mode": "stats",
+					"interval": "1d",
+					"historicalExecution": false
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2021-07-20T07:37:00",
+				"timeZone": "Romance Standard Time",
+				"schedule": {
+					"hours": [
+						1
+					]
+				}
+			}
+		}
+	}
+}

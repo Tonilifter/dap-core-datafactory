@@ -1,0 +1,65 @@
+{
+	"name": "AmazonS3Dataset",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "AmazonS3LinkedService",
+			"type": "LinkedServiceReference",
+			"parameters": {
+				"accessKeyId": {
+					"value": "@dataset().accessKeyId",
+					"type": "Expression"
+				},
+				"secretAccessKey": {
+					"value": "@dataset().secretAccessKey",
+					"type": "Expression"
+				},
+				"sessionToken": {
+					"value": "@dataset().sessionToken",
+					"type": "Expression"
+				}
+			}
+		},
+		"parameters": {
+			"bucket": {
+				"type": "string"
+			},
+			"folder": {
+				"type": "string"
+			},
+			"file": {
+				"type": "string"
+			},
+			"accessKeyId": {
+				"type": "string"
+			},
+			"secretAccessKey": {
+				"type": "string"
+			},
+			"sessionToken": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "extraction/files"
+		},
+		"annotations": [],
+		"type": "Binary",
+		"typeProperties": {
+			"location": {
+				"type": "AmazonS3Location",
+				"bucketName": {
+					"value": "@dataset().bucket",
+					"type": "Expression"
+				},
+				"folderPath": {
+					"value": "@dataset().folder",
+					"type": "Expression"
+				},
+				"fileName": {
+					"value": "@dataset().file",
+					"type": "Expression"
+				}
+			}
+		}
+	}
+}

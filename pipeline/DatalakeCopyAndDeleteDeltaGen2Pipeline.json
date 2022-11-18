@@ -1,0 +1,167 @@
+{
+	"name": "DatalakeCopyAndDeleteDeltaGen2Pipeline",
+	"properties": {
+		"activities": [
+			{
+				"name": "IterateFoldersDeltas",
+				"type": "ForEach",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@pipeline().parameters.folders",
+						"type": "Expression"
+					},
+					"batchCount": 10,
+					"activities": [
+						{
+							"name": "DeleteDeltaFolder",
+							"type": "Delete",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"dataset": {
+									"referenceName": "DatalakeGen2SinkDataset",
+									"type": "DatasetReference",
+									"parameters": {
+										"container": {
+											"value": "@concat(pipeline().parameters.sinkContainer, '/', item())",
+											"type": "Expression"
+										},
+										"storageAccount": {
+											"value": "@pipeline().parameters.storageAccount",
+											"type": "Expression"
+										},
+										"servicePrincipal": {
+											"value": "dlsmigrationsp",
+											"type": "Expression"
+										}
+									}
+								},
+								"enableLogging": false,
+								"storeSettings": {
+									"type": "AzureBlobFSReadSettings",
+									"recursive": true,
+									"enablePartitionDiscovery": false
+								}
+							}
+						},
+						{
+							"name": "CopyFolder",
+							"type": "Copy",
+							"dependsOn": [
+								{
+									"activity": "DeleteDeltaFolder",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "BinarySource",
+									"storeSettings": {
+										"type": "AzureDataLakeStoreReadSettings",
+										"recursive": true,
+										"deleteFilesAfterCompletion": false
+									},
+									"formatSettings": {
+										"type": "BinaryReadSettings"
+									}
+								},
+								"sink": {
+									"type": "BinarySink",
+									"storeSettings": {
+										"type": "AzureBlobFSWriteSettings",
+										"copyBehavior": "PreserveHierarchy"
+									}
+								},
+								"enableStaging": false
+							},
+							"inputs": [
+								{
+									"referenceName": "DatalakeSourceDataset",
+									"type": "DatasetReference",
+									"parameters": {
+										"datalakeName": {
+											"value": "@pipeline().parameters.datalakeName",
+											"type": "Expression"
+										},
+										"root_folder": {
+											"value": "@concat(pipeline().parameters.sourceLayer, '/', item())",
+											"type": "Expression"
+										},
+										"servicePrincipal": {
+											"value": "dlsmigrationsp",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "DatalakeGen2SinkFolderDataset",
+									"type": "DatasetReference",
+									"parameters": {
+										"container": {
+											"value": "@pipeline().parameters.sinkContainer",
+											"type": "Expression"
+										},
+										"storageAccount": {
+											"value": "@pipeline().parameters.storageAccount",
+											"type": "Expression"
+										},
+										"servicePrincipal": {
+											"value": "dlsmigrationsp",
+											"type": "Expression"
+										},
+										"folder": {
+											"value": "@item()",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"datalakeName": {
+				"type": "string"
+			},
+			"storageAccount": {
+				"type": "string"
+			},
+			"folders": {
+				"type": "array"
+			},
+			"sourceLayer": {
+				"type": "string"
+			},
+			"sinkContainer": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "migration"
+		},
+		"annotations": []
+	}
+}

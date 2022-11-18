@@ -1,0 +1,484 @@
+{
+	"name": "DatalakeCopyDeltaGen2Pipeline",
+	"properties": {
+		"activities": [
+			{
+				"name": "IterateRootFoldersDeltas",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Set datalakeName",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Set storageAccount",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@split(pipeline().parameters.layers, ',')",
+						"type": "Expression"
+					},
+					"isSequential": false,
+					"batchCount": 5,
+					"activities": [
+						{
+							"name": "GetModifiedFiles",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "BinarySource",
+									"storeSettings": {
+										"type": "AzureDataLakeStoreReadSettings",
+										"recursive": true,
+										"modifiedDatetimeStart": {
+											"value": "@pipeline().parameters.startDate",
+											"type": "Expression"
+										},
+										"modifiedDatetimeEnd": {
+											"value": "@pipeline().parameters.endDate",
+											"type": "Expression"
+										},
+										"deleteFilesAfterCompletion": false
+									},
+									"formatSettings": {
+										"type": "BinaryReadSettings"
+									}
+								},
+								"sink": {
+									"type": "BinarySink",
+									"storeSettings": {
+										"type": "AzureBlobFSWriteSettings",
+										"copyBehavior": "PreserveHierarchy"
+									}
+								},
+								"enableStaging": false
+							},
+							"inputs": [
+								{
+									"referenceName": "DatalakeSourceDataset",
+									"type": "DatasetReference",
+									"parameters": {
+										"datalakeName": {
+											"value": "@variables('datalakeName')",
+											"type": "Expression"
+										},
+										"root_folder": {
+											"value": "@concat(item(), if(empty(pipeline().parameters.sourceFolder), '', concat('/', pipeline().parameters.sourceFolder)))",
+											"type": "Expression"
+										},
+										"servicePrincipal": {
+											"value": "dlsmigrationsp",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "DatalakeGen2SinkDataset",
+									"type": "DatasetReference",
+									"parameters": {
+										"container": {
+											"value": "@concat(item(), '/temporal_', item(), '/', variables('migrationProcessTimestamp'))",
+											"type": "Expression"
+										},
+										"storageAccount": {
+											"value": "@variables('storageAccount')",
+											"type": "Expression"
+										},
+										"servicePrincipal": {
+											"value": "dlsmigrationsp",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						},
+						{
+							"name": "IfSourceData",
+							"type": "IfCondition",
+							"dependsOn": [
+								{
+									"activity": "GetModifiedFiles",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@greater(activity('GetModifiedFiles').output.dataWritten, 0)",
+									"type": "Expression"
+								},
+								"ifTrueActivities": [
+									{
+										"name": "GetModifiedFolders",
+										"type": "WebActivity",
+										"dependsOn": [
+											{
+												"activity": "Set httpToken",
+												"dependencyConditions": [
+													"Succeeded"
+												]
+											}
+										],
+										"policy": {
+											"timeout": "7.00:00:00",
+											"retry": 2,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": true
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"url": {
+												"value": "@concat('https://coreutils', replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), 'akcore.cloudapp.repsol.com/dap-core-extraction-utils/gen2-copy-modified-files?container=', item(), '&timestamp=', variables('migrationProcessTimestamp'), '&storage_account=', variables('storageAccount'))",
+												"type": "Expression"
+											},
+											"method": "GET",
+											"headers": {
+												"Authorization": {
+													"value": "@concat('Bearer ', variables('httpToken'))",
+													"type": "Expression"
+												}
+											}
+										}
+									},
+									{
+										"name": "HttpToken",
+										"type": "WebActivity",
+										"dependsOn": [
+											{
+												"activity": "Set appIdToken",
+												"dependencyConditions": [
+													"Succeeded"
+												]
+											},
+											{
+												"activity": "Set appSecretToken",
+												"dependencyConditions": [
+													"Succeeded"
+												]
+											}
+										],
+										"policy": {
+											"timeout": "7.00:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": true,
+											"secureInput": true
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"url": "https://login.microsoftonline.com/0a25214f-ee52-483c-b96b-dc79f3227a6f/oauth2/v2.0/token",
+											"method": "POST",
+											"headers": {
+												"Content-Type": "application/x-www-form-urlencoded"
+											},
+											"body": {
+												"value": "@concat('client_id=', variables('appIdToken'), '&client_secret=',  encodeUriComponent(variables('appSecretToken')), '&grant_type=client_credentials&scope=https://graph.microsoft.com/.default')",
+												"type": "Expression"
+											}
+										}
+									},
+									{
+										"name": "Set httpToken",
+										"type": "SetVariable",
+										"dependsOn": [
+											{
+												"activity": "HttpToken",
+												"dependencyConditions": [
+													"Succeeded"
+												]
+											}
+										],
+										"userProperties": [],
+										"typeProperties": {
+											"variableName": "httpToken",
+											"value": {
+												"value": "@activity('HttpToken').output.access_token",
+												"type": "Expression"
+											}
+										}
+									},
+									{
+										"name": "Set appIdToken",
+										"type": "SetVariable",
+										"dependsOn": [
+											{
+												"activity": "GetAppIdToken",
+												"dependencyConditions": [
+													"Succeeded"
+												]
+											}
+										],
+										"userProperties": [],
+										"typeProperties": {
+											"variableName": "appIdToken",
+											"value": {
+												"value": "@activity('GetAppIdToken').output.value",
+												"type": "Expression"
+											}
+										}
+									},
+									{
+										"name": "GetAppIdToken",
+										"type": "WebActivity",
+										"dependsOn": [],
+										"policy": {
+											"timeout": "7.00:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": true,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"url": {
+												"value": "@concat('https://', replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), 'corekv.vault.azure.net/secrets/adapp-extract-id?api-version=7.0')",
+												"type": "Expression"
+											},
+											"connectVia": {
+												"referenceName": "IntegrationRuntimeFreezer",
+												"type": "IntegrationRuntimeReference"
+											},
+											"method": "GET",
+											"authentication": {
+												"type": "MSI",
+												"resource": "https://vault.azure.net"
+											}
+										}
+									},
+									{
+										"name": "GetAppSecretToken",
+										"type": "WebActivity",
+										"dependsOn": [],
+										"policy": {
+											"timeout": "7.00:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": true,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"url": {
+												"value": "@concat('https://', replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), 'corekv.vault.azure.net/secrets/adsp-extract-secret?api-version=7.0')",
+												"type": "Expression"
+											},
+											"connectVia": {
+												"referenceName": "IntegrationRuntimeFreezer",
+												"type": "IntegrationRuntimeReference"
+											},
+											"method": "GET",
+											"authentication": {
+												"type": "MSI",
+												"resource": "https://vault.azure.net"
+											}
+										}
+									},
+									{
+										"name": "Set appSecretToken",
+										"type": "SetVariable",
+										"dependsOn": [
+											{
+												"activity": "GetAppSecretToken",
+												"dependencyConditions": [
+													"Succeeded"
+												]
+											}
+										],
+										"userProperties": [],
+										"typeProperties": {
+											"variableName": "appSecretToken",
+											"value": {
+												"value": "@activity('GetAppSecretToken').output.value",
+												"type": "Expression"
+											}
+										}
+									},
+									{
+										"name": "DatalakeCopyAndDeleteDeltaGen2Pipeline",
+										"type": "ExecutePipeline",
+										"dependsOn": [
+											{
+												"activity": "GetModifiedFolders",
+												"dependencyConditions": [
+													"Succeeded"
+												]
+											}
+										],
+										"userProperties": [],
+										"typeProperties": {
+											"pipeline": {
+												"referenceName": "DatalakeCopyAndDeleteDeltaGen2Pipeline",
+												"type": "PipelineReference"
+											},
+											"waitOnCompletion": true,
+											"parameters": {
+												"datalakeName": {
+													"value": "@variables('datalakeName')",
+													"type": "Expression"
+												},
+												"storageAccount": {
+													"value": "@variables('storageAccount')",
+													"type": "Expression"
+												},
+												"folders": {
+													"value": "@activity('GetModifiedFolders').output.folders",
+													"type": "Expression"
+												},
+												"sourceLayer": {
+													"value": "@item()",
+													"type": "Expression"
+												},
+												"sinkContainer": {
+													"value": "@if(empty(pipeline().parameters.sinkContainer), item(), pipeline().parameters.sinkContainer)",
+													"type": "Expression"
+												}
+											}
+										}
+									},
+									{
+										"name": "DeleteTemporalFolder",
+										"type": "Delete",
+										"dependsOn": [
+											{
+												"activity": "DatalakeCopyAndDeleteDeltaGen2Pipeline",
+												"dependencyConditions": [
+													"Succeeded"
+												]
+											}
+										],
+										"policy": {
+											"timeout": "7.00:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"dataset": {
+												"referenceName": "DatalakeGen2SinkDataset",
+												"type": "DatasetReference",
+												"parameters": {
+													"container": {
+														"value": "@concat(item(), '/temporal_', item(), '/', variables('migrationProcessTimestamp'))",
+														"type": "Expression"
+													},
+													"storageAccount": {
+														"value": "@variables('storageAccount')",
+														"type": "Expression"
+													},
+													"servicePrincipal": {
+														"value": "dlsmigrationsp",
+														"type": "Expression"
+													}
+												}
+											},
+											"enableLogging": false,
+											"storeSettings": {
+												"type": "AzureBlobFSReadSettings",
+												"recursive": true,
+												"enablePartitionDiscovery": false
+											}
+										}
+									}
+								]
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Set datalakeName",
+				"type": "SetVariable",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "datalakeName",
+					"value": {
+						"value": "@concat(replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), pipeline().parameters.businessUnit, 'dapdls')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set storageAccount",
+				"type": "SetVariable",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "storageAccount",
+					"value": {
+						"value": "@concat(replace(replace(replace(pipeline().DataFactory, 'dfcore', ''), 'daplatform0101', 'datahub01'), '01l', '01d'), pipeline().parameters.businessUnit, 'dapdls')",
+						"type": "Expression"
+					}
+				}
+			}
+		],
+		"parameters": {
+			"businessUnit": {
+				"type": "string"
+			},
+			"startDate": {
+				"type": "string"
+			},
+			"endDate": {
+				"type": "string"
+			},
+			"layers": {
+				"type": "string"
+			},
+			"sourceFolder": {
+				"type": "string"
+			},
+			"sinkContainer": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"migrationProcessTimestamp": {
+				"type": "String",
+				"defaultValue": "@formatDateTime(utcNow(), 'yyyyMMddHHmmssfffffff')"
+			},
+			"appIdToken": {
+				"type": "String"
+			},
+			"appSecretToken": {
+				"type": "String"
+			},
+			"httpToken": {
+				"type": "String"
+			},
+			"datalakeName": {
+				"type": "String"
+			},
+			"storageAccount": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "migration"
+		},
+		"annotations": []
+	}
+}

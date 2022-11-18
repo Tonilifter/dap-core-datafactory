@@ -1,0 +1,215 @@
+{
+	"name": "CleanerPipeline",
+	"properties": {
+		"activities": [
+			{
+				"name": "Until EndDate",
+				"type": "Until",
+				"dependsOn": [
+					{
+						"activity": "Set IteratorDate",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@equals(adddays(variables('date'),0),adddays(variables('endDate'),1))",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "date",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "addDay",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "date",
+								"value": {
+									"value": "@concat(split(variables('addDay'),'-')[0],'/',split(variables('addDay'),'-')[1],'/',split(split(variables('addDay'),'-')[2],'T')[0])",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "addDay",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "Cleaner",
+									"dependencyConditions": [
+										"Succeeded",
+										"Failed"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "addDay",
+								"value": {
+									"value": "@adddays(variables('date'),1)",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Cleaner",
+							"type": "DatabricksSparkJar",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"mainClassName": "com.repsol.datalake.ingestion.sanited.CleanerJob",
+								"parameters": [
+									"-s",
+									"@pipeline().parameters.adlSource",
+									"-a",
+									"@pipeline().parameters.application",
+									"-r",
+									"@pipeline().parameters.region",
+									"-d",
+									"@if(equals(pipeline().parameters.dataset,'N/A'),'',pipeline().parameters.dataset)",
+									"-f",
+									"@variables('date')",
+									"-u",
+									"@concat('SANITED#','$',pipeline().parameters.application,'$_',pipeline().parameters.region,'#',variables('date'),'#',utcnow('yyyyMMddHHmmssfff'))",
+									"-p",
+									"@pipeline().parameters.parentUid",
+									"-b",
+									"@pipeline().parameters.businessUnit",
+									"-c",
+									"@concat('',pipeline().parameters.coalesce)",
+									"-x",
+									"@concat('',pipeline().parameters.repartition)"
+								],
+								"libraries": [
+									{
+										"jar": "dbfs:/FileStore/job-jars-ci/ingestion-jar-with-dependencies.jar"
+									}
+								]
+							},
+							"linkedServiceName": {
+								"referenceName": "AzureDatabricksDynamicLinkedService",
+								"type": "LinkedServiceReference",
+								"parameters": {
+									"workers": "2:8",
+									"token": "dbcoar-databricks-token",
+									"clusterVersion": "6.4.x-esr-scala2.11"
+								}
+							}
+						}
+					],
+					"timeout": "7.00:00:00"
+				}
+			},
+			{
+				"name": "Set IteratorDate",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Set EndDate",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "date",
+					"value": {
+						"value": "@pipeline().parameters.fileDate",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set EndDate",
+				"type": "SetVariable",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "endDate",
+					"value": {
+						"value": "@if(equals( pipeline().parameters.fileDateEnd,'N/A'),pipeline().parameters.fileDate,pipeline().parameters.fileDateEnd)",
+						"type": "Expression"
+					}
+				}
+			}
+		],
+		"parameters": {
+			"adlSource": {
+				"type": "String"
+			},
+			"application": {
+				"type": "String"
+			},
+			"region": {
+				"type": "string"
+			},
+			"dataset": {
+				"type": "string",
+				"defaultValue": "N/A"
+			},
+			"fileDate": {
+				"type": "string"
+			},
+			"fileDateEnd": {
+				"type": "string",
+				"defaultValue": "N/A"
+			},
+			"parentUid": {
+				"type": "string",
+				"defaultValue": "N/A"
+			},
+			"package": {
+				"type": "string",
+				"defaultValue": "*"
+			},
+			"repartition": {
+				"type": "string",
+				"defaultValue": "0"
+			},
+			"coalesce": {
+				"type": "string",
+				"defaultValue": "0"
+			},
+			"businessUnit": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"datasets": {
+				"type": "String"
+			},
+			"date": {
+				"type": "String"
+			},
+			"addDay": {
+				"type": "String"
+			},
+			"endDate": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "cleaner"
+		},
+		"annotations": []
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

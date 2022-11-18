@@ -1,0 +1,36 @@
+{
+	"name": "trigger_am_ind_catalyzer_esp_labware_pet_1d",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "ProviderPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"referenceDate": "t",
+					"provider_id": "catalyzer-labware-provider"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2021-11-25T08:42:00",
+				"timeZone": "Romance Standard Time",
+				"schedule": {
+					"minutes": [
+						20
+					],
+					"hours": [
+						4
+					]
+				}
+			}
+		}
+	}
+}

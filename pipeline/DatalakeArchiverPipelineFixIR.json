@@ -1,0 +1,552 @@
+{
+	"name": "DatalakeArchiverPipelineFixIR",
+	"properties": {
+		"description": "Si el parámetro \"deltaEnabled\" es false, se hace una copia completa de los directorios indicados en \"rootFolders\" para la \"bussinesUnit indicada.\n\nEn caso de que \"deltaEnabled\" sea true, se pueden dejar las fechas vacías para que de forma automática calcule el día anterior para hacer la copia. Y también se podrían indicar unas fechas concretas de inicio/fin sobre las que se desea realizar la copia.",
+		"activities": [
+			{
+				"name": "Set deltaStart",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "OperationaLogStart",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "deltaStart",
+					"value": {
+						"value": "@if(pipeline().parameters.deltaEnabled, if(equals(coalesce(pipeline().parameters.deltaStart, ''), ''), formatDateTime(startOfDay(adddays(utcnow(), -1)), 'yyyy-MM-ddTHH:mm:ss'), formatDateTime(startOfDay(pipeline().parameters.deltaStart), 'yyyy-MM-ddTHH:mm:ss')), '')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set deltaEnd",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Set deltaStart",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "deltaEnd",
+					"value": {
+						"value": "@if(pipeline().parameters.deltaEnabled, if(equals(coalesce(pipeline().parameters.deltaEnd, ''), ''), formatDateTime(startOfDay(utcnow()), 'yyyy-MM-ddTHH:mm:ss'), formatDateTime(startOfDay(pipeline().parameters.deltaEnd), 'yyyy-MM-ddTHH:mm:ss')), '')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set rootFolders",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Set deltaEnd",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "rootFolders",
+					"value": {
+						"value": "@if(equals(coalesce(pipeline().parameters.rootFolders, ''), ''), 'raw,processed,ddg,sanited,staging', pipeline().parameters.rootFolders)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "IfDeltaEnabled",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Set rootFolders",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@pipeline().parameters.deltaEnabled",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "DatalakeArchiverCopyFull",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "DatalakeArchiverCopyFullPipelineFixIR",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"rootFolders": {
+										"value": "@variables('rootFolders')",
+										"type": "Expression"
+									},
+									"businessUnit": {
+										"value": "@pipeline().parameters.businessUnit",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "OperationLogErrorArchiverCopyFull",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "DatalakeArchiverCopyFull",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "OperationalLogPipeline",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"nivel": "ERROR",
+									"modulo": "DL_ARCHIVER",
+									"pipelineName": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"logType": "END",
+									"applicationName": {
+										"value": "@pipeline().parameters.businessUnit",
+										"type": "Expression"
+									},
+									"dataDate": {
+										"value": "@formatDateTime(variables('deltaEnd'), 'yyyy/MM/dd')",
+										"type": "Expression"
+									},
+									"message": {
+										"value": "@concat('DatalakeArchiverPipelineFixIR: ', activity('DatalakeArchiverCopyFull').error.message)",
+										"type": "Expression"
+									},
+									"sourceType": "archiver",
+									"uid": {
+										"value": "@concat('DL_ARCHIVER#$', pipeline().parameters.businessUnit, '$#', formatDateTime(variables('deltaEnd'), 'yyyy/MM/dd'))",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "DatalakeArchiverGetHourRange",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "GetSplitDates",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "DatalakeArchiverGetHourRangePipelineFixIR",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"deltas": {
+										"value": "@activity('GetSplitDates').output.dates",
+										"type": "Expression"
+									},
+									"rootFolders": {
+										"value": "@variables('rootFolders')",
+										"type": "Expression"
+									},
+									"businessUnit": {
+										"value": "@pipeline().parameters.businessUnit",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "GetSplitDates",
+							"type": "WebActivity",
+							"dependsOn": [
+								{
+									"activity": "Set httpToken",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": true
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"url": {
+									"value": "@concat('https://coreutils', replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), 'akcore.cloudapp.repsol.com/dap-core-extraction-utils/archiver-split-dates?start_date=', variables('deltaStart'), '&end_date=',variables('deltaEnd'), '&interval=', pipeline().parameters.interval)",
+									"type": "Expression"
+								},
+								"method": "GET",
+								"headers": {
+									"Authorization": {
+										"value": "@concat('Bearer ', variables('httpToken'))",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "HttpToken",
+							"type": "WebActivity",
+							"dependsOn": [
+								{
+									"activity": "Set appSecretToken",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								},
+								{
+									"activity": "Set appIdToken",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": true,
+								"secureInput": true
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"url": "https://login.microsoftonline.com/0a25214f-ee52-483c-b96b-dc79f3227a6f/oauth2/v2.0/token",
+								"method": "POST",
+								"headers": {
+									"Content-Type": "application/x-www-form-urlencoded"
+								},
+								"body": {
+									"value": "@concat('client_id=', variables('appIdToken'), '&client_secret=',  encodeUriComponent(variables('appSecretToken')), '&grant_type=client_credentials&scope=https://graph.microsoft.com/.default')",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Set httpToken",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "HttpToken",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "httpToken",
+								"value": {
+									"value": "@activity('HttpToken').output.access_token",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Set appIdToken",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "GetAppIdToken",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "appIdToken",
+								"value": {
+									"value": "@activity('GetAppIdToken').output.value",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "GetAppIdToken",
+							"type": "WebActivity",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": true,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"url": {
+									"value": "@concat('https://', replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), 'corekv.vault.azure.net/secrets/adapp-extract-id?api-version=7.0')",
+									"type": "Expression"
+								},
+								"connectVia": {
+									"referenceName": "IntegrationRuntimeFreezer",
+									"type": "IntegrationRuntimeReference"
+								},
+								"method": "GET",
+								"authentication": {
+									"type": "MSI",
+									"resource": "https://vault.azure.net"
+								}
+							}
+						},
+						{
+							"name": "GetAppSecretToken",
+							"type": "WebActivity",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": true,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"url": {
+									"value": "@concat('https://', replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), 'corekv.vault.azure.net/secrets/adsp-extract-secret?api-version=7.0')",
+									"type": "Expression"
+								},
+								"connectVia": {
+									"referenceName": "IntegrationRuntimeFreezer",
+									"type": "IntegrationRuntimeReference"
+								},
+								"method": "GET",
+								"authentication": {
+									"type": "MSI",
+									"resource": "https://vault.azure.net"
+								}
+							}
+						},
+						{
+							"name": "Set appSecretToken",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "GetAppSecretToken",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "appSecretToken",
+								"value": {
+									"value": "@activity('GetAppSecretToken').output.value",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "OperationaLogErrorArchiverCopyDeltas",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "DatalakeArchiverGetHourRange",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "OperationalLogPipeline",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"nivel": "ERROR",
+									"modulo": "DL_ARCHIVER",
+									"pipelineName": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"logType": "END",
+									"applicationName": {
+										"value": "@pipeline().parameters.businessUnit",
+										"type": "Expression"
+									},
+									"dataDate": {
+										"value": "@formatDateTime(variables('deltaEnd'), 'yyyy/MM/dd')",
+										"type": "Expression"
+									},
+									"message": {
+										"value": "@concat('DatalakeArchiverPipelineFixIR: ', activity('DatalakeArchiverGetHourRange').error.message)",
+										"type": "Expression"
+									},
+									"sourceType": "archiver",
+									"uid": {
+										"value": "@concat('DL_ARCHIVER#$', pipeline().parameters.businessUnit, '$#', formatDateTime(variables('deltaEnd'), 'yyyy/MM/dd'))",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "OperationaLogEnd",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "IfDeltaEnabled",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "OperationalLogPipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": false,
+					"parameters": {
+						"nivel": "INFO",
+						"modulo": "DL_ARCHIVER",
+						"pipelineName": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"logType": "END",
+						"applicationName": {
+							"value": "@pipeline().parameters.businessUnit",
+							"type": "Expression"
+						},
+						"dataDate": {
+							"value": "@formatDateTime(variables('deltaEnd'), 'yyyy/MM/dd')",
+							"type": "Expression"
+						},
+						"sourceType": "archiver",
+						"uid": {
+							"value": "@concat('DL_ARCHIVER#$', pipeline().parameters.businessUnit, '$#', formatDateTime(variables('deltaEnd'), 'yyyy/MM/dd'))",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "OperationaLogStart",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "OperationalLogPipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": false,
+					"parameters": {
+						"nivel": "INFO",
+						"modulo": "DL_ARCHIVER",
+						"pipelineName": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"logType": "START",
+						"applicationName": {
+							"value": "@pipeline().parameters.businessUnit",
+							"type": "Expression"
+						},
+						"dataDate": {
+							"value": "@formatDateTime(utcnow(), 'yyyy/MM/dd')",
+							"type": "Expression"
+						},
+						"sourceType": "archiver",
+						"uid": {
+							"value": "@concat('DL_ARCHIVER#$', pipeline().parameters.businessUnit, '$#', formatDateTime(utcnow(), 'yyyy/MM/dd'))",
+							"type": "Expression"
+						}
+					}
+				}
+			}
+		],
+		"parameters": {
+			"businessUnit": {
+				"type": "string",
+				"defaultValue": "com"
+			},
+			"deltaEnabled": {
+				"type": "bool",
+				"defaultValue": true
+			},
+			"deltaStart": {
+				"type": "string"
+			},
+			"deltaEnd": {
+				"type": "string"
+			},
+			"rootFolders": {
+				"type": "string"
+			},
+			"interval": {
+				"type": "string",
+				"defaultValue": "3"
+			}
+		},
+		"variables": {
+			"deltaStart": {
+				"type": "String"
+			},
+			"deltaEnd": {
+				"type": "String"
+			},
+			"rootFolders": {
+				"type": "String"
+			},
+			"appIdToken": {
+				"type": "String"
+			},
+			"appSecretToken": {
+				"type": "String"
+			},
+			"httpToken": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "archiver/fix_ir"
+		},
+		"annotations": [],
+		"lastPublishTime": "2020-06-09T08:32:03Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

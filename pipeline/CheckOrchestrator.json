@@ -1,0 +1,629 @@
+{
+	"name": "CheckOrchestrator",
+	"properties": {
+		"activities": [
+			{
+				"name": "HttpToken",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "Set appSecretToken",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": true
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "https://login.microsoftonline.com/0a25214f-ee52-483c-b96b-dc79f3227a6f/oauth2/token",
+						"type": "Expression"
+					},
+					"method": "POST",
+					"headers": {
+						"Content-Type": "application/x-www-form-urlencoded"
+					},
+					"body": {
+						"value": "@concat('client_id=',variables('appIdToken'),'&client_secret=',encodeUriComponent(variables('appSecretToken')),'&grant_type=client_credentials&resource=https://api.loganalytics.io')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set appIdToken",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "GetAppIdToken",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "appIdToken",
+					"value": {
+						"value": "@activity('GetAppIdToken').output.value",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "GetAppIdToken",
+				"type": "WebActivity",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": true,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@concat('https://', replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), 'corekv.vault.azure.net/secrets/adapp-lacore-id?api-version=7.0')",
+						"type": "Expression"
+					},
+					"method": "GET",
+					"authentication": {
+						"type": "MSI",
+						"resource": "https://vault.azure.net"
+					}
+				}
+			},
+			{
+				"name": "GetAppSecretToken",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "Set appIdToken",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": true,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@concat('https://', replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), 'corekv.vault.azure.net/secrets/adsp-lacore-secret?api-version=7.0')",
+						"type": "Expression"
+					},
+					"method": "GET",
+					"authentication": {
+						"type": "MSI",
+						"resource": "https://vault.azure.net"
+					}
+				}
+			},
+			{
+				"name": "Set appSecretToken",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "GetAppSecretToken",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "appSecretToken",
+					"value": {
+						"value": "@activity('GetAppSecretToken').output.value",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set httpToken",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "HttpToken",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "httpToken",
+					"value": {
+						"value": "@activity('HttpToken').output.access_token",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set Time From",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Set httpToken",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "timeFrom",
+					"value": {
+						"value": "@formatDateTime(addminutes(utcNow(),-40), 'yyyy-MM-dd HH:mm')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set Time Until",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Set Time From",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "timeUntil",
+					"value": {
+						"value": "@formatDateTime(addminutes(utcNow(),+1), 'yyyy-MM-dd HH:mm')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set Query",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "TargetType",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "query",
+					"value": {
+						"value": "@concat('{\"query\":\"', variables('envLogAnalytics') , '| where TimeGenerated ', 'between(datetime(', variables('timeFrom'), ') .. datetime(', variables('timeUntil'), ')) | where MODULO_s == \\''ORCHESTRATOR_PROCESS_DUMMY\\'' | project MODULO_s \"}')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set replace character",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Set Query",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "replacing",
+					"value": {
+						"value": "@replace(variables('query'), '\\', '')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "TargetType",
+				"type": "Switch",
+				"dependsOn": [
+					{
+						"activity": "Set Time Until",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"on": {
+						"value": "@replace(replace(pipeline().DataFactory, 'dfcore', ''),'daplatform0101', '')",
+						"type": "Expression"
+					},
+					"cases": [
+						{
+							"value": "l",
+							"activities": [
+								{
+									"name": "Set Lab LA",
+									"type": "SetVariable",
+									"dependsOn": [],
+									"userProperties": [],
+									"typeProperties": {
+										"variableName": "envLogAnalytics",
+										"value": {
+											"value": "CoreOperationLogLab_CL ",
+											"type": "Expression"
+										}
+									}
+								},
+								{
+									"name": "Set Lab LA workspace",
+									"type": "SetVariable",
+									"dependsOn": [
+										{
+											"activity": "Set Lab LA",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"userProperties": [],
+									"typeProperties": {
+										"variableName": "workspace",
+										"value": {
+											"value": "42e812e6-8563-4705-967e-4dd5be805228",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						},
+						{
+							"value": "t",
+							"activities": [
+								{
+									"name": "Set Test LA",
+									"type": "SetVariable",
+									"dependsOn": [],
+									"userProperties": [],
+									"typeProperties": {
+										"variableName": "envLogAnalytics",
+										"value": {
+											"value": "CoreOperationLogTest_CL ",
+											"type": "Expression"
+										}
+									}
+								},
+								{
+									"name": "Set Test LA workspace",
+									"type": "SetVariable",
+									"dependsOn": [
+										{
+											"activity": "Set Test LA",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"userProperties": [],
+									"typeProperties": {
+										"variableName": "workspace",
+										"value": {
+											"value": "42e812e6-8563-4705-967e-4dd5be805228",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						},
+						{
+							"value": "a",
+							"activities": [
+								{
+									"name": "Set Acc LA",
+									"type": "SetVariable",
+									"dependsOn": [],
+									"userProperties": [],
+									"typeProperties": {
+										"variableName": "envLogAnalytics",
+										"value": {
+											"value": "CoreOperationLogAcc_CL ",
+											"type": "Expression"
+										}
+									}
+								},
+								{
+									"name": "Set Acc LA workspace",
+									"type": "SetVariable",
+									"dependsOn": [
+										{
+											"activity": "Set Acc LA",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"userProperties": [],
+									"typeProperties": {
+										"variableName": "workspace",
+										"value": {
+											"value": "42e812e6-8563-4705-967e-4dd5be805228",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						},
+						{
+							"value": "p",
+							"activities": [
+								{
+									"name": "Set Pro LA",
+									"type": "SetVariable",
+									"dependsOn": [],
+									"userProperties": [],
+									"typeProperties": {
+										"variableName": "envLogAnalytics",
+										"value": {
+											"value": "CoreOperationLog_CL ",
+											"type": "Expression"
+										}
+									}
+								},
+								{
+									"name": "Set Pro LA workspace",
+									"type": "SetVariable",
+									"dependsOn": [
+										{
+											"activity": "Set Pro LA",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"userProperties": [],
+									"typeProperties": {
+										"variableName": "workspace",
+										"value": {
+											"value": "cca53411-a96d-494d-b515-ba2ab1dfa174",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						}
+					],
+					"defaultActivities": [
+						{
+							"name": "Set Lab LA copy",
+							"type": "SetVariable",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "envLogAnalytics",
+								"value": {
+									"value": "CoreOperationLogLab_CL ",
+									"type": "Expression"
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "GetLogAnalyticsRec",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "Set replace character",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": true
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@concat('https://api.loganalytics.io/v1/workspaces/', variables('workspace'),'/query')",
+						"type": "Expression"
+					},
+					"method": "POST",
+					"headers": {
+						"Authorization": {
+							"value": "@concat('Bearer ', variables('httpToken'))",
+							"type": "Expression"
+						},
+						"Content-Type": "application/json"
+					},
+					"body": {
+						"value": "@replace(variables('replacing'),'\\','')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "If Data found",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "GetLogAnalyticsRec",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@equals(activity('GetLogAnalyticsRec').output.tables[0].rows[0][0],'ORCHESTRATOR_PROCESS_DUMMY')",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "OperationaLogEndKO",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "OperationalLogPipeline",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"nivel": "ERROR",
+									"modulo": {
+										"value": "ORCHESTRATOR_CHECK_DUMMY",
+										"type": "Expression"
+									},
+									"pipelineName": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"logType": "END",
+									"applicationName": {
+										"value": "AP_ORCH_DUMMY",
+										"type": "Expression"
+									},
+									"dataDate": {
+										"value": "@formatDateTime(utcnow(),'yyyy/MM/dd')",
+										"type": "Expression"
+									},
+									"region": {
+										"value": "ESP",
+										"type": "Expression"
+									},
+									"message": {
+										"value": "@concat('ORCHESTRATOR_CHECK_DUMMY: ', 'Orchestrator is not working properly')",
+										"type": "Expression"
+									},
+									"sourceType": {
+										"value": "db",
+										"type": "Expression"
+									},
+									"uid": {
+										"value": "@variables('uid')",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "OperationaLogEndKO_copy",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "If Data found",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "OperationalLogPipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"nivel": "ERROR",
+						"modulo": {
+							"value": "ORCHESTRATOR_CHECK_DUMMY",
+							"type": "Expression"
+						},
+						"pipelineName": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"logType": "END",
+						"applicationName": {
+							"value": "AP_ORCH_DUMMY",
+							"type": "Expression"
+						},
+						"dataDate": {
+							"value": "@formatDateTime(utcnow(),'yyyy/MM/dd')",
+							"type": "Expression"
+						},
+						"region": {
+							"value": "ESP",
+							"type": "Expression"
+						},
+						"message": {
+							"value": "@concat('ORCHESTRATOR_CHECK_DUMMY: ', 'Orchestrator is not working properly')",
+							"type": "Expression"
+						},
+						"sourceType": {
+							"value": "db",
+							"type": "Expression"
+						},
+						"uid": {
+							"value": "@variables('uid')",
+							"type": "Expression"
+						}
+					}
+				}
+			}
+		],
+		"variables": {
+			"appIdToken": {
+				"type": "String"
+			},
+			"appSecretToken": {
+				"type": "String"
+			},
+			"httpToken": {
+				"type": "String"
+			},
+			"date": {
+				"type": "String",
+				"defaultValue": "@formatDateTime(utcNow(), 'yyyy/MM/dd')"
+			},
+			"uid": {
+				"type": "String",
+				"defaultValue": "@concat('ORCHESTRATOR_CHECK_DUMMY#$AP_ORCH_DUMMY$_ESP#',formatDateTime(utcNow(), 'yyyy/MM/dd'),'#',utcnow('yyyyMMddHHmmssfff'))"
+			},
+			"timeFrom": {
+				"type": "String"
+			},
+			"timeUntil": {
+				"type": "String"
+			},
+			"query": {
+				"type": "String"
+			},
+			"replacing": {
+				"type": "String"
+			},
+			"envLogAnalytics": {
+				"type": "String"
+			},
+			"workspace": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "utils"
+		},
+		"annotations": []
+	}
+}

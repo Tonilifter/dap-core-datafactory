@@ -1,0 +1,35 @@
+{
+	"name": "trigger_ia_com_digital_eess_esp_ddg_track",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "DdgPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"processId": "dim_ddg_track"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2020-06-11T16:23:00Z",
+				"timeZone": "UTC",
+				"schedule": {
+					"minutes": [
+						0
+					],
+					"hours": [
+						1
+					]
+				}
+			}
+		}
+	}
+}

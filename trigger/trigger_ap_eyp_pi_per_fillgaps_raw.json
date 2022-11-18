@@ -1,0 +1,31 @@
+{
+	"name": "trigger_ap_eyp_pi_per_fillgaps_raw",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "PISystemFillGapsPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "AP_EYP_PI",
+					"region": "PER",
+					"piServer": "PECUZ1WPPAF001",
+					"mode": "raw",
+					"interval": "5m"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Minute",
+				"interval": 25,
+				"startTime": "2021-07-20T07:08:00Z",
+				"timeZone": "UTC"
+			}
+		}
+	}
+}

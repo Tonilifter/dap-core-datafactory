@@ -1,0 +1,41 @@
+{
+	"name": "trigger_ea_trad_vortexa_glb_external_api",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "ExternalAPIAzureFunctionPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "EA_TRAD_VORTEXA",
+					"region": "GLB",
+					"is_interval": false,
+					"sourceType": "external_api",
+					"package": "EA_VORTEXA",
+					"mock": "false",
+					"is_durable": true
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2021-08-23T03:00:00",
+				"timeZone": "Romance Standard Time",
+				"schedule": {
+					"minutes": [
+						0
+					],
+					"hours": [
+						6
+					]
+				}
+			}
+		}
+	}
+}

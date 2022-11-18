@@ -1,0 +1,146 @@
+{
+    "name": "CopyILBlobToAdl",
+    "properties": {
+        "activities": [{
+                "name": "bs_landing_to_dl_insecure_copy1",
+                "type": "Copy",
+                "dependsOn": [],
+                "policy": {
+                    "timeout": "7.00:00:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "source": {
+                        "type": "BlobSource",
+                        "recursive": true
+                    },
+                    "sink": {
+                        "type": "AzureDataLakeStoreSink"
+                    },
+                    "enableStaging": false
+                },
+                "inputs": [{
+                    "referenceName": "BlobStorageTriggerDataSet",
+                    "type": "DatasetReference",
+                    "parameters": {
+                        "p_folder_path": {
+                            "value": "@{concat(pipeline().parameters.p_layer, '/', pipeline().parameters.p_prefix_path)}",
+                            "type": "Expression"
+                        },
+                        "p_file_name": {
+                            "value": "@pipeline().parameters.p_file_name",
+                            "type": "Expression"
+                        },
+                        "businessUnit": {
+                            "value": "@pipeline().parameters.p_business_unit",
+                            "type": "Expression"
+                        },
+                        "landingType": {
+                            "value": "@pipeline().parameters.p_landing_type",
+                            "type": "Expression"
+                        }
+                    }
+                }],
+                "outputs": [{
+                    "referenceName": "DataLakeUnstructuredDataSet",
+                    "type": "DatasetReference",
+                    "parameters": {
+                        "p_folder_path": {
+                            "value": "@{concat(pipeline().parameters.p_layer, '/', pipeline().parameters.p_prefix_path, if(equals('sl', pipeline().parameters.p_layer), concat('/year=', pipeline().parameters.p_year, '/month=', pipeline().parameters.p_month, '/day=', pipeline().parameters.p_day), concat('/year=', substring(pipeline().parameters.p_file_name,add(lastindexof(pipeline().parameters.p_file_name, '--'), 2), 4), '/month=',substring(pipeline().parameters.p_file_name,add(lastindexof(pipeline().parameters.p_file_name, '--'), 6), 2), '/day=',substring(pipeline().parameters.p_file_name,add(lastindexof(pipeline().parameters.p_file_name, '--'), 8), 2))), if(empty(pipeline().parameters.p_timestamp), '', concat('/', pipeline().parameters.p_timestamp)))}",
+                            "type": "Expression"
+                        },
+                        "p_file_name": {
+                            "value": "@{concat(substring(pipeline().parameters.p_file_name, 0, lastindexof(pipeline().parameters.p_file_name,'--')), substring(pipeline().parameters.p_file_name, lastindexof(pipeline().parameters.p_file_name, '.'),sub(length(pipeline().parameters.p_file_name), lastindexof(pipeline().parameters.p_file_name,'.'))))}",
+                            "type": "Expression"
+                        },
+                        "p_dl_name": {
+                            "value": "@{concat(replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), pipeline().parameters.p_business_unit, 'dapdls')}",
+                            "type": "Expression"
+                        }
+                    }
+                }]
+            },
+            {
+                "name": "delete_bs_landing_file_insecure_copy1",
+                "type": "Delete",
+                "dependsOn": [{
+                    "activity": "bs_landing_to_dl_insecure_copy1",
+                    "dependencyConditions": [
+                        "Succeeded"
+                    ]
+                }],
+                "policy": {
+                    "timeout": "7.00:00:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "dataset": {
+                        "referenceName": "BlobStorageTriggerDataSet",
+                        "type": "DatasetReference",
+                        "parameters": {
+                            "p_folder_path": {
+                                "value": "@{concat(pipeline().parameters.p_layer, '/', pipeline().parameters.p_prefix_path)}",
+                                "type": "Expression"
+                            },
+                            "p_file_name": {
+                                "value": "@pipeline().parameters.p_file_name",
+                                "type": "Expression"
+                            },
+                            "businessUnit": {
+                                "value": "@pipeline().parameters.p_business_unit",
+                                "type": "Expression"
+                            },
+                            "landingType": {
+                                "value": "@pipeline().parameters.p_landing_type",
+                                "type": "Expression"
+                            }
+                        }
+                    },
+                    "enableLogging": false
+                }
+            }
+        ],
+        "parameters": {
+            "p_layer": {
+                "type": "string"
+            },
+            "p_prefix_path": {
+                "type": "string"
+            },
+            "p_year": {
+                "type": "string"
+            },
+            "p_month": {
+                "type": "string"
+            },
+            "p_day": {
+                "type": "string"
+            },
+            "p_timestamp": {
+                "type": "string"
+            },
+            "p_file_name": {
+                "type": "string"
+            },
+            "p_business_unit": {
+                "type": "string"
+            },
+            "p_landing_type": {
+                "type": "string",
+                "defaultValue": "sl"
+            }
+        },
+        "folder": {
+            "name": "utils"
+        },
+        "annotations": []
+    }
+}

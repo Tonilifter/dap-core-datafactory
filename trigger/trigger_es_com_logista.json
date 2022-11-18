@@ -1,0 +1,38 @@
+{
+	"name": "trigger_es_com_logista",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "FilesPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "ES_COM_LOGISTA",
+					"region": "ESP",
+					"sourceType": "file",
+					"mock": "false"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2020-05-29T04:30:00",
+				"timeZone": "Romance Standard Time",
+				"schedule": {
+					"minutes": [
+						0
+					],
+					"hours": [
+						3
+					]
+				}
+			}
+		}
+	}
+}

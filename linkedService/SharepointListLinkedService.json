@@ -1,0 +1,41 @@
+{
+	"name": "SharepointListLinkedService",
+	"properties": {
+		"type": "SharePointOnlineList",
+		"annotations": [],
+		"typeProperties": {
+			"siteUrl": "@{linkedService().siteUrl}",
+			"tenantId": "0a25214f-ee52-483c-b96b-dc79f3227a6f",
+			"servicePrincipalId": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "KeyVaultDynamicLS",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": "@{linkedService().clientId}"
+			},
+			"servicePrincipalKey": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "KeyVaultDynamicLS",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": "@{linkedService().clientSecret}"
+			}
+		},
+		"parameters": {
+			"siteUrl": {
+				"type": "String",
+				"defaultValue": ""
+			},
+			"clientId": {
+				"type": "String",
+				"defaultValue": ""
+			},
+			"clientSecret": {
+				"type": "String",
+				"defaultValue": ""
+			}
+		}
+	}
+}

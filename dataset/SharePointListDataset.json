@@ -1,0 +1,40 @@
+{
+	"name": "SharePointListDataset",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "SharepointListLinkedService",
+			"type": "LinkedServiceReference",
+			"parameters": {
+				"siteUrl": "https://repsol365.sharepoint.com/sites/TM_DAPlatformTeam",
+				"clientId": {
+					"value": "@dataset().clientId",
+					"type": "Expression"
+				},
+				"clientSecret": {
+					"value": "@dataset().clientSecret",
+					"type": "Expression"
+				}
+			}
+		},
+		"parameters": {
+			"ListName": {
+				"type": "string"
+			},
+			"clientId": {
+				"type": "string"
+			},
+			"clientSecret": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"type": "SharePointOnlineListResource",
+		"schema": [],
+		"typeProperties": {
+			"listName": {
+				"value": "@dataset().ListName",
+				"type": "Expression"
+			}
+		}
+	}
+}

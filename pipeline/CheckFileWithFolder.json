@@ -1,0 +1,334 @@
+{
+	"name": "CheckFileWithFolder",
+	"properties": {
+		"activities": [
+			{
+				"name": "Check File Exists",
+				"type": "GetMetadata",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "DataLakeUnstructuredDataSet",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_folder_path": {
+								"value": "@pipeline().parameters.p_folder_path",
+								"type": "Expression"
+							},
+							"p_file_name": {
+								"value": "@pipeline().parameters.p_file_name",
+								"type": "Expression"
+							},
+							"p_dl_name": {
+								"value": "@pipeline().parameters.p_dl_name",
+								"type": "Expression"
+							}
+						}
+					},
+					"fieldList": [
+						"exists"
+					]
+				}
+			},
+			{
+				"name": "FileExists",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Check File Exists",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@and(activity('Check File Exists').output.exists,pipeline().parameters.overwrite_file)",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "CopyDataDlsFromFile2",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "AzureDataLakeStoreSource",
+									"recursive": true
+								},
+								"sink": {
+									"type": "BinarySink",
+									"storeSettings": {
+										"type": "AzureDataLakeStoreWriteSettings"
+									}
+								},
+								"enableStaging": false
+							},
+							"inputs": [
+								{
+									"referenceName": "DataLakeUnstructuredDataSet",
+									"type": "DatasetReference",
+									"parameters": {
+										"p_folder_path": {
+											"value": "@pipeline().parameters.p_folder_path",
+											"type": "Expression"
+										},
+										"p_file_name": {
+											"value": "@pipeline().parameters.p_file_name",
+											"type": "Expression"
+										},
+										"p_dl_name": {
+											"value": "@pipeline().parameters.p_dl_name",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "DataLakeBinaryCopyPeriodicallySink",
+									"type": "DatasetReference",
+									"parameters": {
+										"p_dl_name": {
+											"value": "@pipeline().parameters.p_dl_name",
+											"type": "Expression"
+										},
+										"layer": {
+											"value": "@pipeline().parameters.layer",
+											"type": "Expression"
+										},
+										"app": {
+											"value": "@pipeline().parameters.app",
+											"type": "Expression"
+										},
+										"region": {
+											"value": "@pipeline().parameters.region",
+											"type": "Expression"
+										},
+										"dataset": {
+											"value": "@pipeline().parameters.dataset",
+											"type": "Expression"
+										},
+										"datadate": {
+											"value": "@pipeline().parameters.filter_path",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "DeleteFile",
+							"type": "Delete",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"dataset": {
+									"referenceName": "DataLakeParquetCopyPeriodicallySink",
+									"type": "DatasetReference",
+									"parameters": {
+										"p_dl_name": {
+											"value": "@pipeline().parameters.p_dl_name",
+											"type": "Expression"
+										},
+										"layer": {
+											"value": "@concat('processed/', pipeline().parameters.layer)",
+											"type": "Expression"
+										},
+										"app": {
+											"value": "@pipeline().parameters.app",
+											"type": "Expression"
+										},
+										"region": {
+											"value": "@pipeline().parameters.region",
+											"type": "Expression"
+										},
+										"dataset": {
+											"value": "@pipeline().parameters.dataset",
+											"type": "Expression"
+										},
+										"datadate": {
+											"value": "@pipeline().parameters.filter_path",
+											"type": "Expression"
+										}
+									}
+								},
+								"enableLogging": false,
+								"storeSettings": {
+									"type": "AzureDataLakeStoreReadSettings",
+									"recursive": true,
+									"wildcardFileName": {
+										"value": "*.parquet",
+										"type": "Expression"
+									},
+									"enablePartitionDiscovery": false
+								}
+							}
+						},
+						{
+							"name": "CopyDataDlsFromFile",
+							"type": "Copy",
+							"dependsOn": [
+								{
+									"activity": "DeleteFile",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "AzureDataLakeStoreSource",
+									"recursive": true
+								},
+								"sink": {
+									"type": "BinarySink",
+									"storeSettings": {
+										"type": "AzureDataLakeStoreWriteSettings"
+									}
+								},
+								"enableStaging": false
+							},
+							"inputs": [
+								{
+									"referenceName": "DataLakeUnstructuredDataSet",
+									"type": "DatasetReference",
+									"parameters": {
+										"p_folder_path": {
+											"value": "@pipeline().parameters.p_folder_path",
+											"type": "Expression"
+										},
+										"p_file_name": {
+											"value": "@pipeline().parameters.p_file_name",
+											"type": "Expression"
+										},
+										"p_dl_name": {
+											"value": "@pipeline().parameters.p_dl_name",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "DataLakeBinaryCopyPeriodicallySink",
+									"type": "DatasetReference",
+									"parameters": {
+										"p_dl_name": {
+											"value": "@pipeline().parameters.p_dl_name",
+											"type": "Expression"
+										},
+										"layer": {
+											"value": "@pipeline().parameters.layer",
+											"type": "Expression"
+										},
+										"app": {
+											"value": "@pipeline().parameters.app",
+											"type": "Expression"
+										},
+										"region": {
+											"value": "@pipeline().parameters.region",
+											"type": "Expression"
+										},
+										"dataset": {
+											"value": "@pipeline().parameters.dataset",
+											"type": "Expression"
+										},
+										"datadate": {
+											"value": "@pipeline().parameters.filter_path",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"p_folder_path": {
+				"type": "string"
+			},
+			"p_file_name": {
+				"type": "string"
+			},
+			"p_dl_name": {
+				"type": "string"
+			},
+			"overwrite_file": {
+				"type": "bool",
+				"defaultValue": false
+			},
+			"layer": {
+				"type": "string"
+			},
+			"app": {
+				"type": "string"
+			},
+			"region": {
+				"type": "string"
+			},
+			"dataset": {
+				"type": "string"
+			},
+			"datadate": {
+				"type": "string"
+			},
+			"source_type": {
+				"type": "string"
+			},
+			"is_consolidated": {
+				"type": "bool",
+				"defaultValue": false
+			},
+			"output_dataset": {
+				"type": "string"
+			},
+			"filter_path": {
+				"type": "string"
+			},
+			"business_unit": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "utils"
+		},
+		"annotations": []
+	}
+}

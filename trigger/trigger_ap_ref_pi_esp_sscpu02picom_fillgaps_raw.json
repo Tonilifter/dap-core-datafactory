@@ -1,0 +1,32 @@
+{
+	"name": "trigger_ap_ref_pi_esp_sscpu02picom_fillgaps_raw",
+	"properties": {
+		"description": "Trigger 5m brutos Puertollano rellenado de huecos",
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "PISystemFillGapsPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "AP_REF_PI",
+					"region": "ESP",
+					"piServer": "SSCPU02PICOM",
+					"mode": "raw",
+					"interval": "5m"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Minute",
+				"interval": 25,
+				"startTime": "2020-04-22T00:10:00",
+				"timeZone": "Romance Standard Time"
+			}
+		}
+	}
+}

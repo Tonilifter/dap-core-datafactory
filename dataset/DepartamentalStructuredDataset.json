@@ -1,0 +1,53 @@
+{
+	"name": "DepartamentalStructuredDataset",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "DepartamentalServerLinkedService",
+			"type": "LinkedServiceReference",
+			"parameters": {
+				"host": "@dataset().host",
+				"userid": "@dataset().userid",
+				"secret_name": "@dataset().secret_name"
+			}
+		},
+		"parameters": {
+			"folder": {
+				"type": "String"
+			},
+			"host": {
+				"type": "String"
+			},
+			"secret_name": {
+				"type": "String"
+			},
+			"userid": {
+				"type": "String"
+			},
+			"delimiter": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "extraction/files"
+		},
+		"annotations": [],
+		"type": "FileShare",
+		"typeProperties": {
+			"format": {
+				"type": "TextFormat",
+				"columnDelimiter": {
+					"value": "@dataset().delimiter",
+					"type": "Expression"
+				},
+				"treatEmptyAsNull": true,
+				"firstRowAsHeader": true
+			},
+			"fileName": "*",
+			"folderPath": {
+				"value": "@dataset().folder",
+				"type": "Expression"
+			}
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

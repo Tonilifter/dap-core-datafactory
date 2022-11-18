@@ -1,0 +1,136 @@
+{
+	"name": "ODBCServerPipeline",
+	"properties": {
+		"activities": [
+			{
+				"name": "CopyData",
+				"type": "Copy",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "OdbcSource",
+						"query": {
+							"value": "@pipeline().parameters.query",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00"
+					},
+					"sink": {
+						"type": "BlobSink",
+						"copyBehavior": "PreserveHierarchy"
+					},
+					"enableStaging": false
+				},
+				"inputs": [
+					{
+						"referenceName": "OdbcDataset",
+						"type": "DatasetReference",
+						"parameters": {
+							"tableODBC": {
+								"value": "@pipeline().parameters.datasetName",
+								"type": "Expression"
+							},
+							"secretName": {
+								"value": "@pipeline().parameters.secret_conn",
+								"type": "Expression"
+							}
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "BlobStorageDatasetLanding",
+						"type": "DatasetReference",
+						"parameters": {
+							"date": {
+								"value": "@concat(variables('today'), '/', variables('ts'))",
+								"type": "Expression"
+							},
+							"extractionTool": {
+								"value": "@pipeline().parameters.extractionTool",
+								"type": "Expression"
+							},
+							"region": {
+								"value": "@pipeline().parameters.region",
+								"type": "Expression"
+							},
+							"format": {
+								"value": "@pipeline().parameters.format",
+								"type": "Expression"
+							},
+							"applicationName": {
+								"value": "@pipeline().parameters.applicationName",
+								"type": "Expression"
+							},
+							"datasetName": {
+								"value": "@pipeline().parameters.datasetName",
+								"type": "Expression"
+							},
+							"businessUnit": {
+								"value": "@pipeline().parameters.businessUnit",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			}
+		],
+		"parameters": {
+			"secret_conn": {
+				"type": "string",
+				"defaultValue": "df-test-conn-odbc"
+			},
+			"datasetName": {
+				"type": "string",
+				"defaultValue": "VibWaveform"
+			},
+			"query": {
+				"type": "string",
+				"defaultValue": "SELECT TOP 10 * FROM VibWaveform"
+			},
+			"applicationName": {
+				"type": "string",
+				"defaultValue": "ODBC_Core"
+			},
+			"region": {
+				"type": "string",
+				"defaultValue": "ESP"
+			},
+			"extractionTool": {
+				"type": "string",
+				"defaultValue": "db"
+			},
+			"businessUnit": {
+				"type": "string",
+				"defaultValue": "com"
+			},
+			"format": {
+				"type": "string",
+				"defaultValue": "avro"
+			}
+		},
+		"variables": {
+			"today": {
+				"type": "String",
+				"defaultValue": "@formatDateTime(utcnow(),'yyyy/MM/dd')"
+			},
+			"ts": {
+				"type": "String",
+				"defaultValue": "@formatDateTime(utcNow(), 'yyyyMMddHHmmss')"
+			}
+		},
+		"folder": {
+			"name": "extraction/databases"
+		},
+		"annotations": []
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

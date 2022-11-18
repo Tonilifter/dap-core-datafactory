@@ -1,0 +1,16 @@
+{
+	"name": "KeyVaultDynamicLS",
+	"properties": {
+		"type": "AzureKeyVault",
+		"annotations": [],
+		"typeProperties": {
+			"baseUrl": "https://daplatform0101l@{linkedService().keyVaultSuffix}.vault.azure.net/"
+		},
+		"parameters": {
+			"keyVaultSuffix": {
+				"type": "String",
+				"defaultValue": "corekv"
+			}
+		}
+	}
+}

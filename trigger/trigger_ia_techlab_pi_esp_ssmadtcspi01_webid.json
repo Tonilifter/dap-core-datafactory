@@ -1,0 +1,30 @@
+{
+	"name": "trigger_ia_techlab_pi_esp_ssmadtcspi01_webid",
+	"properties": {
+		"description": "TECHLAB-SSMADTCSPI01",
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "PISystemGetWebIDPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "IA_TECHLAB_PI",
+					"region": "ESP",
+					"piServer": "SSMADTCSPI01"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Hour",
+				"interval": 1,
+				"startTime": "2021-11-19T10:21:00",
+				"timeZone": "Romance Standard Time"
+			}
+		}
+	}
+}

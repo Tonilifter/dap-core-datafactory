@@ -1,0 +1,40 @@
+{
+	"name": "trigger_methane_ps_noaa_cdo_glb_external_api",
+	"properties": {
+		"description": "trigger para azure function de  NOA en el caso de Methane ",
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "ExternalAPIAzureFunctionPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "PS_NOAA_CDO",
+					"region": "GLB",
+					"is_interval": false,
+					"mock": "false",
+					"is_durable": true
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2021-09-07T10:09:00",
+				"timeZone": "Romance Standard Time",
+				"schedule": {
+					"minutes": [
+						0
+					],
+					"hours": [
+						1
+					]
+				}
+			}
+		}
+	}
+}

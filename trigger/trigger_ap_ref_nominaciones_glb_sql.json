@@ -1,0 +1,42 @@
+{
+	"name": "trigger_ap_ref_nominaciones_glb_sql",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "SQLServerPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "AP_REF_NOMINACIONES",
+					"region": "GLB",
+					"is_interval": false,
+					"referenceDate": "@formatDateTime(convertFromUtc(trigger().startTime, 'UTC'), 'yyyy/MM/dd')",
+					"sourceType": "db",
+					"mock": "false",
+					"package": "Nominaciones"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2022-01-14T09:00:00Z",
+				"timeZone": "UTC",
+				"schedule": {
+					"minutes": [
+						0
+					],
+					"hours": [
+						9,
+						16
+					]
+				}
+			}
+		}
+	}
+}

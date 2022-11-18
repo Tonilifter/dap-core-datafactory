@@ -1,0 +1,36 @@
+{
+	"name": "SalesforceDataset",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "SalesforceLinkedService",
+			"type": "LinkedServiceReference",
+			"parameters": {
+				"environmentUrl": "@dataset().environmentUrl",
+				"username": "@dataset().username",
+				"password": "@dataset().password",
+				"securityToken": "@dataset().securityToken",
+				"apiVersion": "@dataset().apiVersion"
+			}
+		},
+		"parameters": {
+			"environmentUrl": {
+				"type": "string"
+			},
+			"username": {
+				"type": "string"
+			},
+			"password": {
+				"type": "string"
+			},
+			"securityToken": {
+				"type": "string"
+			},
+			"apiVersion": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"type": "SalesforceObject",
+		"schema": []
+	}
+}

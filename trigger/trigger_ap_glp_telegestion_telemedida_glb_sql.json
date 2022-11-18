@@ -1,0 +1,41 @@
+{
+  "name": "trigger_ap_glp_telegestion_telemedida_glb_sql",
+  "properties": {
+    "description": "Trigger para la extracción de la tabla tlm_depositos de telegas",
+    "annotations": [],
+    "runtimeState": "Stopped",
+    "pipelines": [
+      {
+        "pipelineReference": {
+          "referenceName": "SQLServerPipeline",
+          "type": "PipelineReference"
+        },
+        "parameters": {
+          "applicationName": "AP_GLP_TELEGESTION_TELEMEDIDA",
+          "region": "GLB",
+          "is_interval": true,
+          "sourceType": "db",
+          "mock": "false",
+          "package": "TELEGAS"
+        }
+      }
+    ],
+    "type": "ScheduleTrigger",
+    "typeProperties": {
+      "recurrence": {
+        "frequency": "Day",
+        "interval": 1,
+        "startTime": "2021-08-25T00:00:00Z",
+        "timeZone": "UTC",
+        "schedule": {
+          "minutes": [
+            15
+          ],
+          "hours": [
+            0
+          ]
+        }
+      }
+    }
+  }
+}

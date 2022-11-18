@@ -1,0 +1,39 @@
+{
+	"name": "trigger_monitor_iothub_cuota",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "MonitorPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"monitorId": "$AP_IT&D_ARiA$_GLB_IoTHub_Cuota",
+					"laQuery": "let cuota = 6000000;\nlet units = 2;\nlet cuotaThreshold = 0.8 * cuota * units;\nAzureMetrics\n| where MetricName == \"dailyMessageQuotaUsed\" and Resource == \"DAPLATFORM0101PIHDIM\"\n| summarize arg_max(TimeGenerated, *) by Resource\n| project ACTIVITY_NAME= strcat('[', format_datetime(TimeGenerated, 'yyyy/MM/dd') ,'] ', Resource), IS_OK = Maximum < cuotaThreshold, ADDITIONAL_INFO = strcat(Maximum, ' Daily Message Used')\n",
+					"timespan": "PT6H"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2022-01-13T14:48:00Z",
+				"timeZone": "UTC",
+				"schedule": {
+					"minutes": [
+						0
+					],
+					"hours": [
+						7,
+						13,
+						19
+					]
+				}
+			}
+		}
+	}
+}

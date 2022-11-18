@@ -1,0 +1,38 @@
+{
+	"name": "trigger_ap_glp_nace_esp_sql_nace2_1",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "SQLServerPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "AP_GLP_NACE",
+					"region": "ESP",
+					"is_interval": false,
+					"sourceType": "db",
+					"mock": "false",
+					"package": "NACE_DB_COMMERCIAL_32",
+					"referenceDate": "@formatDateTime(convertFromUtc(trigger().startTime, 'Romance Standard Time'),'yyyy/MM/dd')"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2019-12-19T13:00:00",
+				"timeZone": "Romance Standard Time",
+				"schedule": {
+					"hours": [
+						17
+					]
+				}
+			}
+		}
+	}
+}

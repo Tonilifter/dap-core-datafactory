@@ -1,0 +1,30 @@
+{
+	"name": "SqlServerLinkedService",
+	"properties": {
+		"parameters": {
+			"secretName": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"type": "SqlServer",
+		"typeProperties": {
+			"connectionString": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "KeyVaultLinkedService",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": {
+					"value": "@{linkedService().secretName}",
+					"type": "Expression"
+				}
+			}
+		},
+		"connectVia": {
+			"referenceName": "OnPrem",
+			"type": "IntegrationRuntimeReference"
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/linkedservices"
+}

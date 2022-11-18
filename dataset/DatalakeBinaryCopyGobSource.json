@@ -1,0 +1,46 @@
+{
+	"name": "DatalakeBinaryCopyGobSource",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "AzureDataLakeLinkedServiceCopyGob",
+			"type": "LinkedServiceReference",
+			"parameters": {
+				"p_dl_name": {
+					"value": "@dataset().p_dl_name",
+					"type": "Expression"
+				}
+			}
+		},
+		"parameters": {
+			"p_dl_name": {
+				"type": "string"
+			},
+			"layer": {
+				"type": "string"
+			},
+			"app": {
+				"type": "string"
+			},
+			"region": {
+				"type": "string"
+			},
+			"dataset": {
+				"type": "string"
+			},
+			"source_type": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"type": "Binary",
+		"typeProperties": {
+			"location": {
+				"type": "AzureDataLakeStoreLocation",
+				"folderPath": {
+					"value": "@concat(dataset().layer,'/',dataset().source_type,'/',dataset().app,'/',dataset().region,'/',dataset().dataset)",
+					"type": "Expression"
+				}
+			}
+		}
+	}
+}

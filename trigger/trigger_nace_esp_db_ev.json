@@ -1,0 +1,41 @@
+{
+	"name": "trigger_nace_esp_db_ev",
+	"properties": {
+		"description": "Nuevo trigger par la fuente nace con mock activado Catálogo de datos de gobierno.",
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "SQLServerPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "nace",
+					"region": "ESP",
+					"is_interval": false,
+					"sourceType": "db",
+					"mock": "false",
+					"package": "ap_glp_nace"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2021-02-15T13:00:00",
+				"timeZone": "Romance Standard Time",
+				"schedule": {
+					"minutes": [
+						5
+					],
+					"hours": [
+						17
+					]
+				}
+			}
+		}
+	}
+}

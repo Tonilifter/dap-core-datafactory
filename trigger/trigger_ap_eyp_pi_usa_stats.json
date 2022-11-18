@@ -1,0 +1,39 @@
+{
+	"name": "trigger_ap_eyp_pi_usa_stats",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "PISystemProcessPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "AP_EYP_PI_NARU",
+					"region": "USA",
+					"piServer": "USHOU1WPAPP024",
+					"startTime": "y",
+					"endTime": "t",
+					"mode": "stats",
+					"interval": "1d",
+					"historicalExecution": false
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2021-12-21T10:00:00Z",
+				"timeZone": "UTC",
+				"schedule": {
+					"hours": [
+						1
+					]
+				}
+			}
+		}
+	}
+}

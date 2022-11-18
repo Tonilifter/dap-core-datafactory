@@ -1,0 +1,82 @@
+{
+	"name": "DummyProcess",
+	"properties": {
+		"activities": [
+			{
+				"name": "OperationaLogDummy",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "OperationalLogPipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": false,
+					"parameters": {
+						"nivel": "INFO",
+						"modulo": "ORCHESTRATOR_PROCESS_DUMMY",
+						"pipelineName": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"logType": "END",
+						"applicationName": {
+							"value": "@pipeline().parameters.applicationName",
+							"type": "Expression"
+						},
+						"dataDate": {
+							"value": "@variables('date')",
+							"type": "Expression"
+						},
+						"region": {
+							"value": "@pipeline().parameters.region",
+							"type": "Expression"
+						},
+						"sourceType": {
+							"value": "db",
+							"type": "Expression"
+						},
+						"uid": {
+							"value": "@variables('uid')",
+							"type": "Expression"
+						}
+					}
+				}
+			}
+		],
+		"parameters": {
+			"applicationName": {
+				"type": "string",
+				"defaultValue": "AP_ORCH_DUMMY"
+			},
+			"region": {
+				"type": "string",
+				"defaultValue": "ESP"
+			},
+			"referenceDate": {
+				"type": "string"
+			},
+			"frequency": {
+				"type": "string"
+			},
+			"parentUid": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"date": {
+				"type": "String",
+				"defaultValue": "@formatDateTime(utcNow(), 'yyyy/MM/dd')"
+			},
+			"uid": {
+				"type": "String",
+				"defaultValue": "@concat('ORCHESTRATOR_PROCESS_DUMMY#$','AP_ORCH_DUMMY','$_','ESP','#',formatDateTime(utcNow(), 'yyyy/MM/dd'),'#',utcnow('yyyyMMddHHmmssfff'))"
+			}
+		},
+		"folder": {
+			"name": "utils"
+		},
+		"annotations": []
+	}
+}

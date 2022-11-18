@@ -1,0 +1,34 @@
+{
+	"name": "AzureDatabricksDynamicPISystemDataLinkedService",
+	"properties": {
+		"parameters": {
+			"workers": {
+				"type": "string",
+				"defaultValue": "2:8"
+			}
+		},
+		"annotations": [],
+		"type": "AzureDatabricks",
+		"typeProperties": {
+			"domain": "https://westeurope.azuredatabricks.net",
+			"accessToken": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "KeyVaultLinkedServiceDB",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": "databricks-token"
+			},
+			"newClusterNodeType": "Standard_DS3_v2",
+			"newClusterNumOfWorker": "@linkedService().workers",
+			"newClusterSparkEnvVars": {
+				"METADATA_SCHEMA": "pitagmanager",
+				"PYSPARK_PYTHON": "/databricks/python3/bin/python3"
+			},
+			"newClusterVersion": "6.6.x-scala2.11",
+			"newClusterInitScripts": [
+				"dbfs:/FileStore/init-scripts/pisystem/pi_init_script.sh"
+			]
+		}
+	}
+}

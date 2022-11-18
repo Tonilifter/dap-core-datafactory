@@ -1,0 +1,30 @@
+{
+    "name": "ODBCLinkedServicePOC",
+    "type": "Microsoft.DataFactory/factories/linkedservices",
+    "properties": {
+        "type": "Odbc",
+        "annotations": [],
+        "parameters": {
+            "ConnectionString": {
+                "type": "string",
+                "defaultValue": "df-test-conn-odbc"
+            }
+        },
+        "typeProperties": {
+            "connectionString": {
+                "type": "AzureKeyVaultSecret",
+                "store": {
+                    "referenceName": "KeyVaultLinkedService",
+                    "type": "LinkedServiceReference"
+                },
+                "secretName": "@{linkedService().ConnectionString}"
+            },
+            "authenticationType": "Basic",
+            "userName": ""
+        },
+        "connectVia": {
+            "referenceName": "OnPrem2",
+            "type": "IntegrationRuntimeReference"
+        }
+    }
+}

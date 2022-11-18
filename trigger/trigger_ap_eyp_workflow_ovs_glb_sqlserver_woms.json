@@ -1,0 +1,41 @@
+{
+	"name": "trigger_ap_eyp_workflow_ovs_glb_sqlserver_woms",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "SQLServerPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "AP_EYP_WORKFLOW_OVS",
+					"is_interval": false,
+					"mock": "false",
+					"package": "WorkFlow OVS",
+					"region": "GLB",
+					"sourceType": "db",
+					"referenceDate": "@formatDateTime(convertFromUtc(trigger().startTime, 'UTC'), 'yyyy/MM/dd')"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2021-12-23T15:40:00Z",
+				"timeZone": "UTC",
+				"schedule": {
+					"minutes": [
+						0
+					],
+					"hours": [
+						1
+					]
+				}
+			}
+		}
+	}
+}

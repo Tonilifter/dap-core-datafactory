@@ -1,0 +1,47 @@
+{
+	"name": "AzureSqlLinkedService",
+	"properties": {
+		"type": "AzureSqlDatabase",
+		"parameters": {
+			"secretName": {
+				"type": "String"
+			}
+		},
+		"annotations": [],
+		"typeProperties": {
+			"connectionString": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "KeyVaultLinkedService",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": {
+					"value": "@{linkedService().secretName}",
+					"type": "Expression"
+				},
+				"secretVersion": ""
+			},
+			"servicePrincipalId": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "KeyVaultLinkedService",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": "adapp-mtdt-id"
+			},
+			"servicePrincipalKey": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "KeyVaultLinkedService",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": "adsp-mtdt-secret"
+			},
+			"tenant": "0a25214f-ee52-483c-b96b-dc79f3227a6f"
+		},
+		"connectVia": {
+			"referenceName": "OnPrem",
+			"type": "IntegrationRuntimeReference"
+		}
+	}
+}

@@ -1,0 +1,1380 @@
+{
+	"name": "DepartamentalStructuredFilePipeline",
+	"properties": {
+		"activities": [
+			{
+				"name": "IterateOverAllTables",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "GetGovernanceMetadata",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('GetGovernanceMetadata').output.datasets",
+						"type": "Expression"
+					},
+					"isSequential": false,
+					"batchCount": 10,
+					"activities": [
+						{
+							"name": "OperationaLogIterateStart",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "OperationalLogPipeline",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": false,
+								"parameters": {
+									"nivel": "INFO",
+									"modulo": "EXTRACTION_DEPARTAMENTAL_STRUCTURED",
+									"pipelineName": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"logType": "INFO",
+									"applicationName": {
+										"value": "@pipeline().parameters.applicationName",
+										"type": "Expression"
+									},
+									"dataDate": {
+										"value": "@variables('referenceDate')",
+										"type": "Expression"
+									},
+									"datasetName": {
+										"value": "@item().dataset_name",
+										"type": "Expression"
+									},
+									"region": {
+										"value": "@pipeline().parameters.region",
+										"type": "Expression"
+									},
+									"message": {
+										"value": "@concat('Starting copy process for dataset: ', item().dataset_name)",
+										"type": "Expression"
+									},
+									"sourceType": {
+										"value": "@pipeline().parameters.sourceType",
+										"type": "Expression"
+									},
+									"uid": {
+										"value": "@variables('uid')",
+										"type": "Expression"
+									},
+									"parentUid": {
+										"value": "@trim('')",
+										"type": "Expression"
+									},
+									"datasetIn": {
+										"value": "@trim('')",
+										"type": "Expression"
+									},
+									"datasetOut": {
+										"value": "@trim('')",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "OperationaLogIterateEnd",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "CopyData",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "OperationalLogPipeline",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": false,
+								"parameters": {
+									"nivel": "INFO",
+									"modulo": "EXTRACTION_DEPARTAMENTAL_STRUCTURED",
+									"pipelineName": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"logType": "INFO",
+									"applicationName": {
+										"value": "@pipeline().parameters.applicationName",
+										"type": "Expression"
+									},
+									"dataDate": {
+										"value": "@variables('referenceDate')",
+										"type": "Expression"
+									},
+									"datasetName": {
+										"value": "@item().dataset_name",
+										"type": "Expression"
+									},
+									"region": {
+										"value": "@pipeline().parameters.region",
+										"type": "Expression"
+									},
+									"message": {
+										"value": "@concat('Finshed copy process for dataset: ', item().dataset_name)",
+										"type": "Expression"
+									},
+									"sourceType": {
+										"value": "@pipeline().parameters.sourceType",
+										"type": "Expression"
+									},
+									"uid": {
+										"value": "@variables('uid')",
+										"type": "Expression"
+									},
+									"parentUid": {
+										"value": "@trim('')",
+										"type": "Expression"
+									},
+									"datasetIn": {
+										"value": "@trim('')",
+										"type": "Expression"
+									},
+									"datasetOut": {
+										"value": "@trim('')",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "CopyData",
+							"type": "Copy",
+							"dependsOn": [
+								{
+									"activity": "Set fileName",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "BinarySource",
+									"storeSettings": {
+										"type": "FileServerReadSettings",
+										"recursive": false,
+										"deleteFilesAfterCompletion": false
+									},
+									"formatSettings": {
+										"type": "BinaryReadSettings"
+									}
+								},
+								"sink": {
+									"type": "BinarySink",
+									"storeSettings": {
+										"type": "AzureBlobStorageWriteSettings"
+									}
+								},
+								"enableStaging": false,
+								"enableSkipIncompatibleRow": false,
+								"validateDataConsistency": false
+							},
+							"inputs": [
+								{
+									"referenceName": "DepartamentalBinarySingleFileServerDataset",
+									"type": "DatasetReference",
+									"parameters": {
+										"folder": {
+											"value": "@{item().folder}",
+											"type": "Expression"
+										},
+										"host": {
+											"value": "@{item().host}",
+											"type": "Expression"
+										},
+										"userid": {
+											"value": "@{item().user_name}",
+											"type": "Expression"
+										},
+										"secret_name": {
+											"value": "@{item().secret_name}",
+											"type": "Expression"
+										},
+										"filename": {
+											"value": "@variables('fileName')",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "BlobStorageDepLandingDataset",
+									"type": "DatasetReference",
+									"parameters": {
+										"businessUnit": "@item().business_unit",
+										"landingType": "sl",
+										"extractionTool": "@pipeline().parameters.sourceType",
+										"applicationName": "@{pipeline().parameters.applicationName}",
+										"region": "@{pipeline().parameters.region}",
+										"datasetName": "@item().dataset_name",
+										"date": "@{concat(item().sink_date, '/', activity('GetGovernanceMetadata').output.ts)}"
+									}
+								}
+							]
+						},
+						{
+							"name": "OperationaLogErrorCopyData",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "CopyData",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "OperationalLogPipeline",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"nivel": {
+										"value": "@if(item().is_optional, 'INFO', 'ERROR')",
+										"type": "Expression"
+									},
+									"modulo": "EXTRACTION_DEPARTAMENTAL_STRUCTURED",
+									"pipelineName": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"logType": {
+										"value": "@if(item().is_optional, 'INFO', 'ERROR')",
+										"type": "Expression"
+									},
+									"applicationName": {
+										"value": "@pipeline().parameters.applicationName",
+										"type": "Expression"
+									},
+									"dataDate": {
+										"value": "@variables('referenceDate')",
+										"type": "Expression"
+									},
+									"datasetName": {
+										"value": "@item().dataset_name",
+										"type": "Expression"
+									},
+									"region": {
+										"value": "@pipeline().parameters.region",
+										"type": "Expression"
+									},
+									"message": {
+										"value": "@concat('CopyData: ', activity('CopyData').error.message)",
+										"type": "Expression"
+									},
+									"sourceType": {
+										"value": "@pipeline().parameters.sourceType",
+										"type": "Expression"
+									},
+									"uid": {
+										"value": "@variables('uid')",
+										"type": "Expression"
+									},
+									"parentUid": {
+										"value": "@trim('')",
+										"type": "Expression"
+									},
+									"datasetIn": {
+										"value": "@trim('')",
+										"type": "Expression"
+									},
+									"datasetOut": {
+										"value": "@trim('')",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "Append Structured DatasetIn",
+							"type": "AppendVariable",
+							"dependsOn": [
+								{
+									"activity": "CopyData",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "datasetIn",
+								"value": {
+									"value": "@concat('{\"NAME\":\"', item().dataset_name, '\",\"PATH\":\"', item().folder, '\",\"NUM_ITEMS\":\"', activity('CopyData').output.filesRead,'\"}')",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Append DatasetOut",
+							"type": "AppendVariable",
+							"dependsOn": [
+								{
+									"activity": "CopyData",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "datasetOut",
+								"value": {
+									"value": "@concat('{\"NAME\":\"', item().dataset_name, '\",\"PATH\":\"wasbs://staging@', replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), 'sa', item().business_unit, 'sl.blob.core.windows.net/file/', item().application_name, '/', item().region, '/', item().dataset_name, '/', item().sink_date, '/', activity('GetGovernanceMetadata').output.ts, '/', item().dataset_name ,'.avro','\",\"NUM_ITEMS\":\"', activity('CopyData').output.filesWritten,'\"}')",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Set fileName",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "OperationaLogIterateStart",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "fileName",
+								"value": {
+									"value": "@concat(if(equals(pipeline().parameters.mock,'true'),\nitem().dataset_name,if(empty(item().fileName),\nitem().dataset_name,item().fileName)),\nif(equals(item().file_by_date, 'true'),\n concat('--', \n formatDateTime(item().sink_date, \n if(empty(item().filename_date_format),'yyyymmdd',item().filename_date_format))),''),\n '.',item().file_type)",
+									"type": "Expression"
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "OperationaLogStart",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "OperationalLogPipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": false,
+					"parameters": {
+						"nivel": "INFO",
+						"modulo": "EXTRACTION_DEPARTAMENTAL_STRUCTURED",
+						"pipelineName": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"logType": "START",
+						"applicationName": {
+							"value": "@pipeline().parameters.applicationName",
+							"type": "Expression"
+						},
+						"dataDate": {
+							"value": "@variables('referenceDate')",
+							"type": "Expression"
+						},
+						"region": {
+							"value": "@pipeline().parameters.region",
+							"type": "Expression"
+						},
+						"sourceType": {
+							"value": "@pipeline().parameters.sourceType",
+							"type": "Expression"
+						},
+						"uid": {
+							"value": "@variables('uid')",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "OperationaLogErrorGetMetada",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "GetGovernanceMetadata",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "OperationalLogPipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"nivel": "ERROR",
+						"modulo": "EXTRACTION_DEPARTAMENTAL_STRUCTURED",
+						"pipelineName": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"logType": "END",
+						"applicationName": {
+							"value": "@pipeline().parameters.applicationName",
+							"type": "Expression"
+						},
+						"dataDate": {
+							"value": "@variables('referenceDate')",
+							"type": "Expression"
+						},
+						"region": {
+							"value": "@pipeline().parameters.region",
+							"type": "Expression"
+						},
+						"message": {
+							"value": "@concat('GetGovernanceMetadata: ', activity('GetGovernanceMetadata').error.message)",
+							"type": "Expression"
+						},
+						"sourceType": {
+							"value": "@pipeline().parameters.sourceType",
+							"type": "Expression"
+						},
+						"uid": {
+							"value": "@variables('uid')",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "OperationaLogEnd",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "CopyExtractionMetadata",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "OperationalLogPipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": false,
+					"parameters": {
+						"nivel": "INFO",
+						"modulo": "EXTRACTION_DEPARTAMENTAL_STRUCTURED",
+						"pipelineName": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"logType": "END",
+						"applicationName": {
+							"value": "@pipeline().parameters.applicationName",
+							"type": "Expression"
+						},
+						"dataDate": {
+							"value": "@variables('referenceDate')",
+							"type": "Expression"
+						},
+						"region": {
+							"value": "@pipeline().parameters.region",
+							"type": "Expression"
+						},
+						"sourceType": {
+							"value": "@pipeline().parameters.sourceType",
+							"type": "Expression"
+						},
+						"uid": {
+							"value": "@variables('uid')",
+							"type": "Expression"
+						},
+						"datasetIn": {
+							"value": "@variables('datasetIn')",
+							"type": "Expression"
+						},
+						"datasetOut": {
+							"value": "@variables('datasetOut')",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "Execute Ingestion",
+				"description": "From Blob to DataLake",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "CopyExtractionMetadata",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "IngestionEphemeralPipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"metadataPath": {
+							"value": "@{concat('wasbs://staging@', replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), 'sa', activity('GetGovernanceMetadata').output.datasets[0].business_unit, 'sl.blob.core.windows.net/file/',pipeline().parameters.applicationName,'/',pipeline().parameters.region, '/metadata/',activity('GetGovernanceMetadata').output.datasets[0].sink_date,'/',activity('GetGovernanceMetadata').output.ts,'/metadata.avro')}",
+							"type": "Expression"
+						},
+						"applicationName": {
+							"value": "@pipeline().parameters.applicationName",
+							"type": "Expression"
+						},
+						"region": {
+							"value": "@pipeline().parameters.region",
+							"type": "Expression"
+						},
+						"extractionDate": {
+							"value": "@activity('GetGovernanceMetadata').output.datasets[0].sink_date",
+							"type": "Expression"
+						},
+						"workers": {
+							"value": "@{if(empty(string(activity('GetGovernanceMetadata').output.datasets[0].min_workers)),2,string(activity('GetGovernanceMetadata').output.datasets[0].min_workers))}:@{if(empty(string(activity('GetGovernanceMetadata').output.datasets[0].max_workers)),8,string(activity('GetGovernanceMetadata').output.datasets[0].max_workers))}",
+							"type": "Expression"
+						},
+						"parentUid": {
+							"value": "@variables('uid')",
+							"type": "Expression"
+						},
+						"package": {
+							"value": "@pipeline().parameters.package",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "IterateOverAllTables_Deletion",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Execute Ingestion",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('GetGovernanceMetadata').output.datasets",
+						"type": "Expression"
+					},
+					"isSequential": false,
+					"batchCount": 10,
+					"activities": [
+						{
+							"name": "OperationaLogIterateStartSourceDeletion",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "OperationalLogPipeline",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"nivel": "INFO",
+									"modulo": "EXTRACTION_DEPARTAMENTAL_STRUCTURED",
+									"pipelineName": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"logType": "INFO",
+									"applicationName": {
+										"value": "@pipeline().parameters.applicationName",
+										"type": "Expression"
+									},
+									"dataDate": {
+										"value": "@variables('referenceDate')",
+										"type": "Expression"
+									},
+									"datasetName": {
+										"value": "@item().dataset_name",
+										"type": "Expression"
+									},
+									"region": {
+										"value": "@pipeline().parameters.region",
+										"type": "Expression"
+									},
+									"message": {
+										"value": "@concat('Starting deletion of source files for: ', item().dataset_name)",
+										"type": "Expression"
+									},
+									"sourceType": {
+										"value": "@pipeline().parameters.sourceType",
+										"type": "Expression"
+									},
+									"uid": {
+										"value": "@trim('')",
+										"type": "Expression"
+									},
+									"parentUid": {
+										"value": "@trim('')",
+										"type": "Expression"
+									},
+									"datasetIn": {
+										"value": "@trim('')",
+										"type": "Expression"
+									},
+									"datasetOut": {
+										"value": "@trim('')",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "OperationaLogIterateEndSourceDeletion",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "If Condition Delete_Source",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "OperationalLogPipeline",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"nivel": "INFO",
+									"modulo": "EXTRACTION_DEPARTAMENTAL_STRUCTURED",
+									"pipelineName": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"logType": "END",
+									"applicationName": {
+										"value": "@pipeline().parameters.applicationName",
+										"type": "Expression"
+									},
+									"dataDate": {
+										"value": "@variables('referenceDate')",
+										"type": "Expression"
+									},
+									"datasetName": {
+										"value": "@item().dataset_name",
+										"type": "Expression"
+									},
+									"region": {
+										"value": "@pipeline().parameters.region",
+										"type": "Expression"
+									},
+									"message": {
+										"value": "@concat('End Deletion of source file for dataset: ', item().dataset_name)",
+										"type": "Expression"
+									},
+									"sourceType": {
+										"value": "@pipeline().parameters.sourceType",
+										"type": "Expression"
+									},
+									"uid": {
+										"value": "@variables('uid')",
+										"type": "Expression"
+									},
+									"parentUid": {
+										"value": "@trim('')",
+										"type": "Expression"
+									},
+									"datasetIn": {
+										"value": "@trim('')",
+										"type": "Expression"
+									},
+									"datasetOut": {
+										"value": "@trim('')",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "If Condition Delete_Source",
+							"type": "IfCondition",
+							"dependsOn": [
+								{
+									"activity": "OperationaLogIterateStartSourceDeletion",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@and(bool(item().delete_source),not(empty(item().file_type)))",
+									"type": "Expression"
+								},
+								"ifTrueActivities": [
+									{
+										"name": "OperationaLogErrorDeleteSourceFile",
+										"type": "ExecutePipeline",
+										"dependsOn": [
+											{
+												"activity": "DeleteSourceFile",
+												"dependencyConditions": [
+													"Failed"
+												]
+											}
+										],
+										"userProperties": [],
+										"typeProperties": {
+											"pipeline": {
+												"referenceName": "OperationalLogPipeline",
+												"type": "PipelineReference"
+											},
+											"waitOnCompletion": true,
+											"parameters": {
+												"nivel": "ERROR",
+												"modulo": "EXTRACTION_DEPARTAMENTAL_STRUCTURED",
+												"pipelineName": {
+													"value": "@pipeline().Pipeline",
+													"type": "Expression"
+												},
+												"logType": "ERROR",
+												"applicationName": {
+													"value": "@pipeline().parameters.applicationName",
+													"type": "Expression"
+												},
+												"dataDate": {
+													"value": "@variables('referenceDate')",
+													"type": "Expression"
+												},
+												"datasetName": {
+													"value": "@item().dataset_name",
+													"type": "Expression"
+												},
+												"region": {
+													"value": "@pipeline().parameters.region",
+													"type": "Expression"
+												},
+												"message": {
+													"value": "@concat('DeleteSourceFile: ', activity('DeleteSourceFile').error.message)",
+													"type": "Expression"
+												},
+												"sourceType": {
+													"value": "@pipeline().parameters.sourceType",
+													"type": "Expression"
+												},
+												"uid": {
+													"value": "@trim('')",
+													"type": "Expression"
+												},
+												"parentUid": {
+													"value": "@trim('')",
+													"type": "Expression"
+												},
+												"datasetIn": {
+													"value": "@trim('')",
+													"type": "Expression"
+												},
+												"datasetOut": {
+													"value": "@trim('')",
+													"type": "Expression"
+												}
+											}
+										}
+									},
+									{
+										"name": "DeleteSourceFile",
+										"type": "Delete",
+										"dependsOn": [],
+										"policy": {
+											"timeout": "7.00:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"dataset": {
+												"referenceName": "DepartamentalBinarySingleFileServerDataset",
+												"type": "DatasetReference",
+												"parameters": {
+													"folder": "@{item().folder}",
+													"host": "@{item().host}",
+													"userid": "@{item().user_name}",
+													"secret_name": "@{item().secret_name}",
+													"filename": "@{item().dataset_name}.@{item().file_type}"
+												}
+											},
+											"enableLogging": false,
+											"storeSettings": {
+												"type": "FileServerReadSettings",
+												"recursive": true
+											}
+										}
+									},
+									{
+										"name": "OperationaLogDeleteSourceFileEnd",
+										"type": "ExecutePipeline",
+										"dependsOn": [
+											{
+												"activity": "DeleteSourceFile",
+												"dependencyConditions": [
+													"Succeeded"
+												]
+											}
+										],
+										"userProperties": [],
+										"typeProperties": {
+											"pipeline": {
+												"referenceName": "OperationalLogPipeline",
+												"type": "PipelineReference"
+											},
+											"waitOnCompletion": true,
+											"parameters": {
+												"nivel": "INFO",
+												"modulo": "EXTRACTION_DEPARTAMENTAL_STRUCTURED",
+												"pipelineName": {
+													"value": "@pipeline().Pipeline",
+													"type": "Expression"
+												},
+												"logType": "INFO",
+												"applicationName": {
+													"value": "@pipeline().parameters.applicationName",
+													"type": "Expression"
+												},
+												"dataDate": {
+													"value": "@variables('referenceDate')",
+													"type": "Expression"
+												},
+												"datasetName": {
+													"value": "@item().dataset_name",
+													"type": "Expression"
+												},
+												"region": {
+													"value": "@pipeline().parameters.region",
+													"type": "Expression"
+												},
+												"message": {
+													"value": "@concat('Finished file deletion: ', item().dataset_name,'.',item().file_type)",
+													"type": "Expression"
+												},
+												"sourceType": {
+													"value": "@pipeline().parameters.sourceType",
+													"type": "Expression"
+												},
+												"uid": {
+													"value": "@variables('uid')",
+													"type": "Expression"
+												},
+												"parentUid": {
+													"value": "@trim('')",
+													"type": "Expression"
+												},
+												"datasetIn": {
+													"value": "@trim('')",
+													"type": "Expression"
+												},
+												"datasetOut": {
+													"value": "@trim('')",
+													"type": "Expression"
+												}
+											}
+										}
+									}
+								]
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "GetAppIdToken",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "OperationaLogStart",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": true,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@concat('https://', replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), 'corekv.vault.azure.net/secrets/adapp-extract-id?api-version=7.0')",
+						"type": "Expression"
+					},
+					"connectVia": {
+						"referenceName": "IntegrationRuntimeFreezer",
+						"type": "IntegrationRuntimeReference"
+					},
+					"method": "GET",
+					"authentication": {
+						"type": "MSI",
+						"resource": "https://vault.azure.net"
+					}
+				}
+			},
+			{
+				"name": "Set appIdToken",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "GetAppIdToken",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "appIdToken",
+					"value": {
+						"value": "@activity('GetAppIdToken').output.value",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "GetAppSecretToken",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "Set appIdToken",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": true,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@concat('https://', replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), 'corekv.vault.azure.net/secrets/adsp-extract-secret?api-version=7.0')",
+						"type": "Expression"
+					},
+					"connectVia": {
+						"referenceName": "IntegrationRuntimeFreezer",
+						"type": "IntegrationRuntimeReference"
+					},
+					"method": "GET",
+					"authentication": {
+						"type": "MSI",
+						"resource": "https://vault.azure.net"
+					}
+				}
+			},
+			{
+				"name": "Set appSecretToken",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "GetAppSecretToken",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "appSecretToken",
+					"value": {
+						"value": "@activity('GetAppSecretToken').output.value",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "HttpToken",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "Set appSecretToken",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": true,
+					"secureInput": true
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": "https://login.microsoftonline.com/0a25214f-ee52-483c-b96b-dc79f3227a6f/oauth2/v2.0/token",
+					"method": "POST",
+					"headers": {
+						"Content-Type": "application/x-www-form-urlencoded"
+					},
+					"body": {
+						"value": "@concat('client_id=', variables('appIdToken'), '&client_secret=',  encodeUriComponent(variables('appSecretToken')), '&grant_type=client_credentials&scope=https://graph.microsoft.com/.default')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set httpToken",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "HttpToken",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "httpToken",
+					"value": {
+						"value": "@activity('HttpToken').output.access_token",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "GetGovernanceMetadata",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "Set httpToken",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": true
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@concat('https://coreutils', replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), 'akcore.cloudapp.repsol.com/dap-core-extraction-utils/governance-metadata')",
+						"type": "Expression"
+					},
+					"method": "GET",
+					"headers": {
+						"x-application-name": {
+							"value": "@pipeline().parameters.applicationName",
+							"type": "Expression"
+						},
+						"x-region": {
+							"value": "@pipeline().parameters.region",
+							"type": "Expression"
+						},
+						"x-source-type": "files",
+						"x-reference-date": {
+							"value": "@variables('referenceDate')",
+							"type": "Expression"
+						},
+						"x-mock-results": {
+							"value": "@pipeline().parameters.mock",
+							"type": "Expression"
+						},
+						"x-package-name": {
+							"value": "@pipeline().parameters.package",
+							"type": "Expression"
+						},
+						"Authorization": {
+							"value": "@concat('Bearer ', variables('httpToken'))",
+							"type": "Expression"
+						},
+						"x-is-interval": {
+							"value": "false",
+							"type": "Expression"
+						},
+						"x-structured": "true"
+					}
+				}
+			},
+			{
+				"name": "RenewToken",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "IterateOverAllTables",
+						"dependencyConditions": [
+							"Succeeded",
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": true,
+					"secureInput": true
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": "https://login.microsoftonline.com/0a25214f-ee52-483c-b96b-dc79f3227a6f/oauth2/v2.0/token",
+					"method": "POST",
+					"headers": {
+						"Content-Type": "application/x-www-form-urlencoded"
+					},
+					"body": {
+						"value": "@concat('client_id=', variables('appIdToken'), '&client_secret=',  encodeUriComponent(variables('appSecretToken')), '&grant_type=client_credentials&scope=https://graph.microsoft.com/.default')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Renew Set httpToken",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "RenewToken",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "httpToken",
+					"value": {
+						"value": "@activity('RenewToken').output.access_token",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "CopyExtractionMetadata",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "Renew Set httpToken",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": true
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@concat('https://coreutils', replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), 'akcore.cloudapp.repsol.com/dap-core-extraction-utils/parse-metadata')",
+						"type": "Expression"
+					},
+					"method": "POST",
+					"headers": {
+						"x-application-name": {
+							"value": "@pipeline().parameters.applicationName",
+							"type": "Expression"
+						},
+						"x-region": {
+							"value": "@pipeline().parameters.region",
+							"type": "Expression"
+						},
+						"x-source-type": {
+							"value": "@pipeline().parameters.sourceType",
+							"type": "Expression"
+						},
+						"x-reference-date": {
+							"value": "@variables('referenceDate')",
+							"type": "Expression"
+						},
+						"x-file-type": "avro",
+						"x-extraction-ts": {
+							"value": "@activity('GetGovernanceMetadata').output.ts",
+							"type": "Expression"
+						},
+						"x-landing-type": "sl",
+						"x-dataset-metadata": "metadata",
+						"Authorization": {
+							"value": "@concat('Bearer ', variables('httpToken'))",
+							"type": "Expression"
+						},
+						"x-is-interval": {
+							"value": "false",
+							"type": "Expression"
+						},
+						"x-exclude-ds-path": "true",
+						"x-ds-to-lower": "false"
+					},
+					"body": {
+						"value": "@json(concat('{\"dataset_metadata\": ', activity('GetGovernanceMetadata').output.datasets, '}'))",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "OperationaLogErrorCreateMetadata",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "CopyExtractionMetadata",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "OperationalLogPipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"nivel": "ERROR",
+						"modulo": "EXTRACTION_DEPARTAMENTAL_STRUCTURED",
+						"pipelineName": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"logType": "END",
+						"applicationName": {
+							"value": "@pipeline().parameters.applicationName",
+							"type": "Expression"
+						},
+						"dataDate": {
+							"value": "@variables('referenceDate')",
+							"type": "Expression"
+						},
+						"region": {
+							"value": "@pipeline().parameters.region",
+							"type": "Expression"
+						},
+						"message": {
+							"value": "@concat('CopyExtractionMetadata: ', activity('CopyExtractionMetadata').error.message)",
+							"type": "Expression"
+						},
+						"sourceType": {
+							"value": "@pipeline().parameters.sourceType",
+							"type": "Expression"
+						},
+						"uid": {
+							"value": "@variables('uid')",
+							"type": "Expression"
+						}
+					}
+				}
+			}
+		],
+		"parameters": {
+			"applicationName": {
+				"type": "String",
+				"defaultValue": "application_name"
+			},
+			"region": {
+				"type": "String",
+				"defaultValue": "ESP"
+			},
+			"referenceDate": {
+				"type": "string"
+			},
+			"sourceType": {
+				"type": "string",
+				"defaultValue": "file"
+			},
+			"parentUid": {
+				"type": "string"
+			},
+			"package": {
+				"type": "string",
+				"defaultValue": "*"
+			},
+			"mock": {
+				"type": "string",
+				"defaultValue": "true"
+			}
+		},
+		"variables": {
+			"referenceDate": {
+				"type": "String",
+				"defaultValue": "@if(empty(pipeline().parameters.referenceDate),utcnow('yyyy/MM/dd'),pipeline().parameters.referenceDate)"
+			},
+			"uid": {
+				"type": "String",
+				"defaultValue": "@if(equals(pipeline().parameters.package, '*'), concat('EXTRACTION_DEPARTAMENTAL_STRUCTURED#$', pipeline().parameters.applicationName, '$_', pipeline().parameters.region, '#', if(empty(pipeline().parameters.referenceDate),utcnow('yyyy/MM/dd'),pipeline().parameters.referenceDate) , '#', utcnow('yyyyMMddHHmmssfff')), concat('EXTRACTION_DEPARTAMENTAL_STRUCTURED#', pipeline().parameters.package, '_$', pipeline().parameters.applicationName, '$_', pipeline().parameters.region, '#', if(empty(pipeline().parameters.referenceDate),utcnow('yyyy/MM/dd'),pipeline().parameters.referenceDate) , '#', utcnow('yyyyMMddHHmmssfff')))"
+			},
+			"datasetIn": {
+				"type": "Array"
+			},
+			"datasetOut": {
+				"type": "Array"
+			},
+			"appIdToken": {
+				"type": "String"
+			},
+			"appSecretToken": {
+				"type": "String"
+			},
+			"httpToken": {
+				"type": "String"
+			},
+			"fileName": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "extraction/files"
+		},
+		"annotations": []
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

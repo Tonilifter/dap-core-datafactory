@@ -1,0 +1,279 @@
+{
+	"name": "ConsolidatorPipeline",
+	"properties": {
+		"activities": [
+			{
+				"name": "Consolidator",
+				"type": "DatabricksNotebook",
+				"dependsOn": [
+					{
+						"activity": "OperationaLogStart",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"notebookPath": "/CORE/consolidator_notebook/consolidator",
+					"baseParameters": {
+						"layer": {
+							"value": "@pipeline().parameters.layer",
+							"type": "Expression"
+						},
+						"source": {
+							"value": "@pipeline().parameters.source",
+							"type": "Expression"
+						},
+						"application": {
+							"value": "@pipeline().parameters.application",
+							"type": "Expression"
+						},
+						"region": {
+							"value": "@pipeline().parameters.region",
+							"type": "Expression"
+						},
+						"dataset": {
+							"value": "@if(equals(pipeline().parameters.dataset,'N/A'),'',pipeline().parameters.dataset)",
+							"type": "Expression"
+						},
+						"fileDate": {
+							"value": "@if(equals(pipeline().parameters.fileDate,'N/A'),variables('date'),pipeline().parameters.fileDate)",
+							"type": "Expression"
+						},
+						"spName": {
+							"value": "@pipeline().parameters.servicePrincipalName",
+							"type": "Expression"
+						},
+						"businessUnit": {
+							"value": "@pipeline().parameters.businessUnit",
+							"type": "Expression"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "AzureDatabricksDynamicLinkedService",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"workers": "2:8",
+						"token": "dbcoar-databricks-token",
+						"clusterVersion": "6.4.x-esr-scala2.11"
+					}
+				}
+			},
+			{
+				"name": "OperationaLogErrorConsolidator",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Consolidator",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "OperationalLogPipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"nivel": "ERROR",
+						"modulo": "CONSOLIDATOR",
+						"pipelineName": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"logType": "END",
+						"applicationName": {
+							"value": "@pipeline().parameters.application",
+							"type": "Expression"
+						},
+						"dataDate": {
+							"value": "@if(equals(pipeline().parameters.fileDate,'N/A'), concat(substring(variables('date'), 5, 5), substring(variables('date'), 16, 3), substring(variables('date'), 23, 2)), if(startsWith(pipeline().parameters.fileDate, 'year='), concat(substring(pipeline().parameters.fileDate, 5, 5), substring(pipeline().parameters.fileDate, 16, 3), substring(pipeline().parameters.fileDate, 23, 2)), substring(pipeline().parameters.fileDate, add(indexOf(pipeline().parameters.fileDate, '='), 1), sub(length(pipeline().parameters.fileDate), add(indexOf(pipeline().parameters.fileDate, '='), 1)))))",
+							"type": "Expression"
+						},
+						"datasetName": {
+							"value": "@pipeline().parameters.dataset",
+							"type": "Expression"
+						},
+						"region": {
+							"value": "@pipeline().parameters.region",
+							"type": "Expression"
+						},
+						"message": {
+							"value": "@concat('ConsolidatorNotebook', activity('Consolidator').error.message)",
+							"type": "Expression"
+						},
+						"sourceType": {
+							"value": "@trim('')",
+							"type": "Expression"
+						},
+						"uid": {
+							"value": "@variables('uid')",
+							"type": "Expression"
+						},
+						"parentUid": {
+							"value": "N/A",
+							"type": "Expression"
+						},
+						"datasetIn": {
+							"value": "@trim('')",
+							"type": "Expression"
+						},
+						"datasetOut": {
+							"value": "@trim('')",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "OperationaLogConsolidatorEnd",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Consolidator",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "OperationalLogPipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": false,
+					"parameters": {
+						"nivel": "INFO",
+						"modulo": "CONSOLIDATOR",
+						"pipelineName": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"logType": "END",
+						"applicationName": {
+							"value": "@pipeline().parameters.application",
+							"type": "Expression"
+						},
+						"dataDate": {
+							"value": "@if(equals(pipeline().parameters.fileDate,'N/A'), concat(substring(variables('date'), 5, 5), substring(variables('date'), 16, 3), substring(variables('date'), 23, 2)), if(startsWith(pipeline().parameters.fileDate, 'year='), concat(substring(pipeline().parameters.fileDate, 5, 5), substring(pipeline().parameters.fileDate, 16, 3), substring(pipeline().parameters.fileDate, 23, 2)), substring(pipeline().parameters.fileDate, add(indexOf(pipeline().parameters.fileDate, '='), 1), sub(length(pipeline().parameters.fileDate), add(indexOf(pipeline().parameters.fileDate, '='), 1)))))",
+							"type": "Expression"
+						},
+						"region": {
+							"value": "@pipeline().parameters.region",
+							"type": "Expression"
+						},
+						"uid": {
+							"value": "@variables('uid')",
+							"type": "Expression"
+						},
+						"parentUid": {
+							"value": "N/A",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "OperationaLogStart",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "OperationalLogPipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": false,
+					"parameters": {
+						"nivel": "INFO",
+						"modulo": "CONSOLIDATOR",
+						"pipelineName": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"logType": "START",
+						"applicationName": {
+							"value": "@pipeline().parameters.application",
+							"type": "Expression"
+						},
+						"dataDate": {
+							"value": "@formatDateTime(utcnow(),'yyyy/MM/dd')",
+							"type": "Expression"
+						},
+						"region": {
+							"value": "@pipeline().parameters.region",
+							"type": "Expression"
+						},
+						"sourceType": {
+							"value": "@pipeline().parameters.source",
+							"type": "Expression"
+						},
+						"uid": {
+							"value": "@variables('uid')",
+							"type": "Expression"
+						}
+					}
+				}
+			}
+		],
+		"parameters": {
+			"layer": {
+				"type": "string"
+			},
+			"source": {
+				"type": "string"
+			},
+			"application": {
+				"type": "string"
+			},
+			"region": {
+				"type": "string"
+			},
+			"dataset": {
+				"type": "string",
+				"defaultValue": "N/A"
+			},
+			"fileDate": {
+				"type": "string",
+				"defaultValue": "N/A"
+			},
+			"servicePrincipalName": {
+				"type": "string"
+			},
+			"businessUnit": {
+				"type": "string"
+			},
+			"referenceDate": {
+				"type": "string"
+			}
+
+		},
+		"variables": {
+			"date": {
+				"type": "String",
+				"defaultValue": "@concat( 'year=',substring(pipeline().parameters.referenceDate, 0, 4), '/',  'month=',substring(pipeline().parameters.referenceDate, 5, 2), '/',  'day=',substring(pipeline().parameters.referenceDate, 8, 2))"
+			},
+			"uid": {
+				"type": "String",
+				"defaultValue": "@concat('CONSOLIDATOR#$',pipeline().parameters.application,'$_',pipeline().parameters.region,'#',if(empty(pipeline().parameters.fileDate),variables('date'),pipeline().parameters.fileDate),'#',utcnow('yyyyMMddHHmmssfff'))"
+			}
+		},
+		"folder": {
+			"name": "utils"
+		},
+		"annotations": []
+	}
+}

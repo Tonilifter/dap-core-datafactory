@@ -1,0 +1,39 @@
+{
+  "name": "trigger_housekeeping_comdapila",
+  "properties": {
+    "annotations": [],
+    "runtimeState": "Stopped",
+    "pipelines": [
+      {
+        "pipelineReference": {
+          "referenceName": "DeleteEmptyFilesPipeline",
+          "type": "PipelineReference"
+        },
+        "parameters": {
+          "business_unit": "com",
+          "secure": "il"
+        }
+      }
+    ],
+    "type": "ScheduleTrigger",
+    "typeProperties": {
+      "recurrence": {
+        "frequency": "Week",
+        "interval": 1,
+        "startTime": "2019-08-14T10:00:00Z",
+        "timeZone": "UTC",
+        "schedule": {
+          "minutes": [
+            0
+          ],
+          "hours": [
+            7
+          ],
+          "weekDays": [
+            "Sunday"
+          ]
+        }
+      }
+    }
+  }
+}

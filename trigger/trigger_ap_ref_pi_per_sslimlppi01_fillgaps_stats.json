@@ -1,0 +1,40 @@
+{
+	"name": "trigger_ap_ref_pi_per_sslimlppi01_fillgaps_stats",
+	"properties": {
+		"description": "Trigger diario estadisticos Pampilla rellenado de huecos",
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "PISystemFillGapsPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "AP_REF_PI",
+					"region": "PER",
+					"piServer": "SSLIMLPPI01",
+					"mode": "stats",
+					"interval": "1d"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2021-07-20T11:33:00",
+				"timeZone": "Romance Standard Time",
+				"schedule": {
+					"minutes": [
+						30
+					],
+					"hours": [
+						14
+					]
+				}
+			}
+		}
+	}
+}

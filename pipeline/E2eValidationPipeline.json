@@ -1,0 +1,61 @@
+{
+	"name": "E2eValidationPipeline",
+	"properties": {
+		"activities": [
+			{
+				"name": "E2eValidation",
+				"type": "DatabricksSparkJar",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"mainClassName": "com.repsol.datalake.core.validations.E2eValidationJob",
+					"parameters": [
+						"-i",
+						"@pipeline().parameters.validationId",
+						"-d",
+						"@variables('referenceDate')"
+					],
+					"libraries": [
+						{
+							"jar": "dbfs:/FileStore/job-jars-ci/dap-core-e2e-validations-jar-with-dependencies.jar"
+						}
+					]
+				},
+				"linkedServiceName": {
+					"referenceName": "AzureDatabricksDynamicLinkedService",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"workers": "2:8",
+						"token": "dbcoar-databricks-token",
+						"clusterVersion": "6.4.x-esr-scala2.11"
+					}
+				}
+			}
+		],
+		"parameters": {
+			"validationId": {
+				"type": "string"
+			},
+			"referenceDate": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"referenceDate": {
+				"type": "String",
+				"defaultValue": "@if(empty(pipeline().parameters.referenceDate),utcnow('yyyy/MM/dd'),pipeline().parameters.referenceDate)"
+			}
+		},
+		"folder": {
+			"name": "e2e_validation"
+		},
+		"annotations": []
+	}
+}

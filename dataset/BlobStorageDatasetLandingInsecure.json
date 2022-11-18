@@ -1,0 +1,57 @@
+{
+	"name": "BlobStorageDatasetLandingInsecure",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "BlobStorageLinkedService",
+			"type": "LinkedServiceReference",
+			"parameters": {
+				"businessUnit": "@dataset().businessUnit",
+				"landingType": "il"
+			}
+		},
+		"parameters": {
+			"date": {
+				"type": "String"
+			},
+			"extractionTool": {
+				"type": "String"
+			},
+			"region": {
+				"type": "String",
+				"defaultValue": "@{pipeline().parameters.region}"
+			},
+			"format": {
+				"type": "String"
+			},
+			"applicationName": {
+				"type": "String",
+				"defaultValue": "@{pipeline().parameters.applicationName}"
+			},
+			"datasetName": {
+				"type": "String"
+			},
+			"businessUnit": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "extraction/blob"
+		},
+		"annotations": [],
+		"type": "AzureBlob",
+		"typeProperties": {
+			"format": {
+				"type": "AvroFormat"
+			},
+			"fileName": {
+				"value": "@{dataset().datasetName}.@{dataset().format}",
+				"type": "Expression"
+			},
+			"folderPath": {
+				"value": "staging/@{dataset().extractionTool}/@{dataset().applicationName}/@{dataset().region}/@{dataset().datasetName}/@{dataset().date}",
+				"type": "Expression"
+			}
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

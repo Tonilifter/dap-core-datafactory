@@ -1,0 +1,30 @@
+{
+	"name": "trigger_pi_corp_aemet_glb_external_api_aux",
+	"properties": {
+		"description": "Trigger auxiliar para asegurar la carga de aemet",
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "ExternalAPIAzureFunctionPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "PI_CORP_AEMET",
+					"region": "GLB",
+					"mock": "false"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2020-11-23T18:15:00Z",
+				"timeZone": "UTC"
+			}
+		}
+	}
+}

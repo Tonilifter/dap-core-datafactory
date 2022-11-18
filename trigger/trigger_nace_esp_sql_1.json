@@ -1,0 +1,35 @@
+{
+	"name": "trigger_nace_esp_sql_1",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "SQLServerPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "nace",
+					"region": "ESP",
+					"is_interval": false,
+					"package": "trigger_package_1"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2021-01-28T15:08:00Z",
+				"timeZone": "UTC",
+				"schedule": {
+					"hours": [
+						15
+					]
+				}
+			}
+		}
+	}
+}

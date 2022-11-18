@@ -1,0 +1,52 @@
+{
+	"name": "TeradataCloudLinkedService",
+	"properties": {
+		"type": "Teradata",
+		"typeProperties": {
+			"server": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "KeyVaultLinkedService",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": "@{linkedService().server}"
+			},
+			"authenticationType": "Basic",
+			"username": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "KeyVaultLinkedService",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": "@{linkedService().user}"
+			},
+			"password": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "KeyVaultLinkedService",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": "@{linkedService().secretName}"
+			}
+		},
+		"parameters": {
+			"server": {
+				"type": "String",
+				"defaultValue": ""
+			},
+			"user": {
+				"type": "String",
+				"defaultValue": ""
+			},
+			"secretName": {
+				"type": "String",
+				"defaultValue": ""
+			}
+		},
+		"annotations": [],
+		"connectVia": {
+			"referenceName": "OnPrem",
+			"type": "IntegrationRuntimeReference"
+		}
+	}
+}

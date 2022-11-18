@@ -1,0 +1,33 @@
+{
+	"name": "crack_spread_execute_model",
+	"properties": {
+		"activities": [
+			{
+				"name": "execute_model_by_api_rest",
+				"type": "WebActivity",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": "http://localhost:8001/apis/batch/v1/namespaces/default/jobs",
+					"method": "POST",
+					"headers": {
+						"Content-Type": "application/yaml"
+					},
+					"body": "apiVersion: batch/v1\nkind: Job\nmetadata:\n  name: example-job\nspec:\n  template:\n    metadata:\n      name: example-job\n    spec:\n      containers:\n      - name: pi\n        image: perl\n        command: [\"perl\",  \"-Mbignum=bpi\", \"-wle\", \"print bpi(2000)\"]\n      restartPolicy: Never"
+				}
+			}
+		],
+		"folder": {
+			"name": "postingestion"
+		},
+		"annotations": []
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

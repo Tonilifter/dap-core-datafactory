@@ -1,0 +1,17 @@
+{
+	"name": "AnonymousHttpLinkedService",
+	"properties": {
+		"parameters": {
+			"baseUrl": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"type": "HttpServer",
+		"typeProperties": {
+			"url": "@{linkedService().baseUrl}",
+			"enableServerCertificateValidation": true,
+			"authenticationType": "Anonymous"
+		}
+	}
+}

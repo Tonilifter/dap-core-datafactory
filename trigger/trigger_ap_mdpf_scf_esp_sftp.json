@@ -1,0 +1,38 @@
+{
+	"name": "trigger_ap_mdpf_scf_esp_sftp",
+	"properties": {
+		"description": "Daily Facturas ETL",
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "FilesPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "AP_MDPF_SCF",
+					"region": "ESP",
+					"mock": "false"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2019-06-19T05:00:00",
+				"timeZone": "Romance Standard Time",
+				"schedule": {
+					"minutes": [
+						30
+					],
+					"hours": [
+						22
+					]
+				}
+			}
+		}
+	}
+}

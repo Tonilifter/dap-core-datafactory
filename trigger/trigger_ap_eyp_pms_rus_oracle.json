@@ -1,0 +1,41 @@
+{
+	"name": "trigger_ap_eyp_pms_rus_oracle",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "OraclePipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "AP_EYP_PMS",
+					"region": "RUS",
+					"is_interval": true,
+					"sourceType": "db",
+					"mock": false,
+					"package": "ENERGY COMPONENT - RUSIA"
+				}
+
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2021-01-20T15:00:00Z",
+				"timeZone": "UTC",
+				"schedule": {
+					"minutes": [
+						0
+					],
+					"hours": [
+						2
+					]
+				}
+			}
+		}
+	}
+}

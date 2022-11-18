@@ -1,0 +1,27 @@
+{
+	"name": "trigger_ap_qui_pi_ptsie1wpspi001_request",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "PISystemBackfillingPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"pi_server": "PTSIE1WPSPI001"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Hour",
+				"interval": 1,
+				"startTime": "2021-07-20T07:45:00",
+				"timeZone": "Romance Standard Time"
+			}
+		}
+	}
+}

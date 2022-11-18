@@ -1,0 +1,39 @@
+{
+	"name": "trigger_ap_eyp_pi_per_fillgaps_stats",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "PISystemFillGapsPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "AP_EYP_PI",
+					"region": "PER",
+					"piServer": "PECUZ1WPPAF001",
+					"mode": "stats",
+					"interval": "1d"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2021-12-02T07:19:00",
+				"timeZone": "Romance Standard Time",
+				"schedule": {
+					"minutes": [
+						30
+					],
+					"hours": [
+						14
+					]
+				}
+			}
+		}
+	}
+}

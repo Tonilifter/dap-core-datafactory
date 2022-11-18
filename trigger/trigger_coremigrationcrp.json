@@ -1,0 +1,29 @@
+{
+	"name": "trigger_coremigrationcrp",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "DatalakeMigrationGen2Pipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"businessUnit": "crp",
+					"startDate": "@formatDateTime(addminutes(convertFromUtc(trigger().startTime, 'UTC'), -30), 'yyyy-MM-ddTHH:mm')",
+					"endDate": "@formatDateTime(convertFromUtc(trigger().startTime, 'UTC'), 'yyyy-MM-ddTHH:mm')"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Minute",
+				"interval": 30,
+				"startTime": "2021-12-29T12:36:00Z",
+				"timeZone": "UTC"
+			}
+		}
+	}
+}

@@ -1,0 +1,23 @@
+{
+	"name": "BlobStorageLinkedService",
+	"properties": {
+		"parameters": {
+			"businessUnit": {
+				"type": "String"
+			},
+			"landingType": {
+				"type": "String"
+			}
+		},
+		"annotations": [],
+		"type": "AzureBlobStorage",
+		"typeProperties": {
+			"serviceEndpoint": "@{concat('https://', 'daplatform0101l', 'sa', linkedService().businessUnit, linkedService().landingType, '.blob.core.windows.net/')}"
+		},
+		"connectVia": {
+			"referenceName": "IntegrationRuntimeFreezer",
+			"type": "IntegrationRuntimeReference"
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/linkedservices"
+}

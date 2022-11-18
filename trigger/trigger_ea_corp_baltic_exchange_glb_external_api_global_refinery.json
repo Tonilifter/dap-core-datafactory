@@ -1,0 +1,41 @@
+{
+	"name": "trigger_ea_corp_baltic_exchange_glb_external_api_global_refinery",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "ExternalAPIAzureFunctionPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "EA_CORP_BALTIC_EXCHANGE",
+					"region": "GLB",
+					"is_interval": false,
+					"sourceType": "external_api",
+					"package": "BALTIC EXCHANGE API",
+					"mock": "false",
+					"is_durable": true
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2021-10-06T08:00:00",
+				"timeZone": "Romance Standard Time",
+				"schedule": {
+					"minutes": [
+						0
+					],
+					"hours": [
+						8
+					]
+				}
+			}
+		}
+	}
+}

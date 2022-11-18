@@ -1,0 +1,219 @@
+{
+	"name": "DatalakeArchiverGetModifiedFoldersPipelineFixIR",
+	"properties": {
+		"activities": [
+			{
+				"name": "IterateRootFolders",
+				"type": "ForEach",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@split(pipeline().parameters.rootFolders, ',')",
+						"type": "Expression"
+					},
+					"isSequential": false,
+					"batchCount": 5,
+					"activities": [
+						{
+							"name": "GetModifiedFiles",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "BinarySource",
+									"storeSettings": {
+										"type": "AzureDataLakeStoreReadSettings",
+										"recursive": true,
+										"modifiedDatetimeStart": {
+											"value": "@pipeline().parameters.deltaStart",
+											"type": "Expression"
+										},
+										"modifiedDatetimeEnd": {
+											"value": "@pipeline().parameters.deltaEnd",
+											"type": "Expression"
+										},
+										"deleteFilesAfterCompletion": false
+									},
+									"formatSettings": {
+										"type": "BinaryReadSettings"
+									}
+								},
+								"sink": {
+									"type": "BinarySink",
+									"storeSettings": {
+										"type": "AzureBlobFSWriteSettings",
+										"copyBehavior": "PreserveHierarchy"
+									}
+								},
+								"enableStaging": false
+							},
+							"inputs": [
+								{
+									"referenceName": "DatalakeArchiverSourceDataset",
+									"type": "DatasetReference",
+									"parameters": {
+										"dl_name": {
+											"value": "@concat(replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), pipeline().parameters.businessUnit, 'dapdls')",
+											"type": "Expression"
+										},
+										"root_folder": {
+											"value": "@item()",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "DatalakeArchiverSinkDatasetFixIR",
+									"type": "DatasetReference",
+									"parameters": {
+										"datalakeContainer": {
+											"value": "@pipeline().parameters.businessUnit",
+											"type": "Expression"
+										},
+										"datalakeRootFolder": {
+											"value": "archiver_process_@{item()}/@{variables('archiverProcessTimestamp')}",
+											"type": "Expression"
+										},
+										"datalakeName": {
+											"value": "@concat(replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), 'dlar')",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						},
+						{
+							"name": "IfSourceData",
+							"type": "IfCondition",
+							"dependsOn": [
+								{
+									"activity": "GetModifiedFiles",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@greater(activity('GetModifiedFiles').output.dataWritten, 0)",
+									"type": "Expression"
+								},
+								"ifTrueActivities": [
+									{
+										"name": "DatalakeArchiverGetRawFolders",
+										"type": "ExecutePipeline",
+										"dependsOn": [],
+										"userProperties": [],
+										"typeProperties": {
+											"pipeline": {
+												"referenceName": "DatalakeArchiverGetRawFoldersPipelineFixIR",
+												"type": "PipelineReference"
+											},
+											"waitOnCompletion": true,
+											"parameters": {
+												"archiverProcessTimestamp": {
+													"value": "@variables('archiverProcessTimestamp')",
+													"type": "Expression"
+												},
+												"businessUnit": {
+													"value": "@pipeline().parameters.businessUnit",
+													"type": "Expression"
+												},
+												"rootFolder": {
+													"value": "@item()",
+													"type": "Expression"
+												}
+											}
+										}
+									},
+									{
+										"name": "DeleteArchiverProcessFolder",
+										"type": "Delete",
+										"dependsOn": [
+											{
+												"activity": "DatalakeArchiverGetRawFolders",
+												"dependencyConditions": [
+													"Succeeded"
+												]
+											}
+										],
+										"policy": {
+											"timeout": "7.00:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"dataset": {
+												"referenceName": "DatalakeArchiverSinkDatasetFixIR",
+												"type": "DatasetReference",
+												"parameters": {
+													"datalakeContainer": {
+														"value": "@pipeline().parameters.businessUnit",
+														"type": "Expression"
+													},
+													"datalakeRootFolder": {
+														"value": "@concat('archiver_process_', item(), '/', variables('archiverProcessTimestamp'))",
+														"type": "Expression"
+													},
+													"datalakeName": {
+														"value": "@concat(replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), 'dlar')",
+														"type": "Expression"
+													}
+												}
+											},
+											"enableLogging": false,
+											"storeSettings": {
+												"type": "AzureBlobFSReadSettings",
+												"recursive": true,
+												"enablePartitionDiscovery": false
+											}
+										}
+									}
+								]
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"deltaStart": {
+				"type": "string"
+			},
+			"deltaEnd": {
+				"type": "string"
+			},
+			"rootFolders": {
+				"type": "string"
+			},
+			"businessUnit": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"archiverProcessTimestamp": {
+				"type": "String",
+				"defaultValue": "@formatDateTime(utcNow(), 'yyyyMMddHHmmssfffffff')"
+			}
+		},
+		"folder": {
+			"name": "archiver/fix_ir"
+		},
+		"annotations": []
+	}
+}

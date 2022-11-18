@@ -1,0 +1,40 @@
+{
+	"name": "trigger_ap_ref_pi_esp_sstar03pi10_raw_1d",
+	"properties": {
+		"description": "Trigger diario Tarragona",
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "PISystemProcessPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "AP_REF_PI",
+					"region": "ESP",
+					"piServer": "SSTAR03PI10",
+					"startTime": "t-31d",
+					"endTime": "t",
+					"mode": "raw",
+					"interval": "30d",
+					"historicalExecution": false
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2021-11-24T20:00:00",
+				"timeZone": "Romance Standard Time",
+				"schedule": {
+					"hours": [
+						3
+					]
+				}
+			}
+		}
+	}
+}

@@ -1,0 +1,30 @@
+{
+	"name": "trigger_ap_ref_pi_esp_sscpu02piq_webid",
+	"properties": {
+		"description": "Puertollano-SSCPU02PIQ",
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "PISystemGetWebIDPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "AP_QUI_PI",
+					"region": "ESP",
+					"piServer": "SSCPU02PIQ"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Hour",
+				"interval": 1,
+				"startTime": "2021-04-28T10:41:00",
+				"timeZone": "Romance Standard Time"
+			}
+		}
+	}
+}

@@ -1,0 +1,29 @@
+{
+	"name": "trigger_ingest_com_ila",
+	"properties": {
+		"description": "Trigger for files written in comercial insecure account .",
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "IngestionFileReceiverPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"p_folder_path": "@triggerBody().folderPath",
+					"p_file_name": "@triggerBody().fileName"
+				}
+			}
+		],
+		"type": "BlobEventsTrigger",
+		"typeProperties": {
+			"blobPathBeginsWith": "/staging/blobs/external/",
+			"ignoreEmptyBlobs": true,
+			"scope": "/subscriptions/50a00d8c-0d30-4f65-ad49-e80107df138b/resourceGroups/z0euw1ldmrsg054/providers/Microsoft.Storage/storageAccounts/daplatform0101lsacomil",
+			"events": [
+				"Microsoft.Storage.BlobCreated"
+			]
+		}
+	}
+}

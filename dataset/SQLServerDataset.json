@@ -1,0 +1,36 @@
+{
+	"name": "SQLServerDataset",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "SqlServerLinkedService",
+			"type": "LinkedServiceReference",
+			"parameters": {
+				"secretName": {
+					"value": "@dataset().secretName",
+					"type": "Expression"
+				}
+			}
+		},
+		"parameters": {
+			"tableName": {
+				"type": "string"
+			},
+			"secretName": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "extraction/databases"
+		},
+		"annotations": [],
+		"type": "SqlServerTable",
+		"schema": [],
+		"typeProperties": {
+			"tableName": {
+				"value": "@dataset().tableName",
+				"type": "Expression"
+			}
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

@@ -1,0 +1,430 @@
+{
+	"name": "OperationalLogPipeline",
+	"properties": {
+		"description": "Valores de 'logType': START, END, INFO, WARN, ERROR\n\nValores de 'nivel': DEBUG, INFO, WARN, ERROR\n\nValores de 'modulo': EXTRACTION, INGESTION, PROCESSOR, PROVIDER...\n\nValores de 'sourceType': db, file, api...\n\nSi el parámetro 'uid' viene relleno se utilizará ese valor para llamar al API. En caso contrario se calcula de la siguiente forma: appName_region_datasetName_sourceType",
+		"activities": [
+			{
+				"name": "PostLogApi",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "SetModulo",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@concat('https://operationlog', replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), 'akcore.cloudapp.repsol.com/dap-core-operationlog-api/log/')",
+						"type": "Expression"
+					},
+					"method": "POST",
+					"headers": {
+						"Content-Type": "application/json"
+					},
+					"body": {
+						"value": "@string(json(concat('{\"FECHA\":\"',utcnow('yyyy-MM-dd HH:mm:ss.fff'),'\",\"NIVEL\":\"', pipeline().parameters.nivel, '\",\"MODULO\":\"', variables('modulo'),  '\",\"INSTANCIA\":\"', pipeline().parameters.pipelineName, '\",\"UID\":\"', variables('uid'),'\", \"EQUIPO\":\"CORE\",\"CLASE\":\"\",\"PAYLOAD\":\"', replace(replace(variables('payload'), '\\', '\\\\'), '\"', '\\\"'), '\"}')))",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "CreatePayload",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "SetMessageFromDictIfExists",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "payload",
+					"value": {
+						"value": "@string(json(concat('{\"LOGTYPE\":\"', pipeline().parameters.logType, '\",\"STATUS\":\"', variables('status'), '\",\"USER\":\"', variables('user'), '\",\"PARENTUID\":\"', pipeline().parameters.parentUid,'\",\"REGION\":\"', pipeline().parameters.region, '\",\"APPLICATION\":\"', pipeline().parameters.applicationName, '\"', variables('dataset'),',\"DATADATE\":\"', variables('dataDate'), '\",\"MSG\":\"', replace(uriComponentToString(replace(uriComponent(variables('message')), '%5C', '%5C%5C')), '\"', '\\\"'), '\"', variables('lineage'), ',\"RUNS_ON\":\"ADF\"', variables('extraFields'),'}')))",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "SetUID",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "CreatePayload",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "uid",
+					"value": {
+						"value": "@if(or(equals(coalesce(pipeline().parameters.uid, ''), ''), equals(pipeline().parameters.uid, 'null')), concat(pipeline().parameters.modulo, '#$', pipeline().parameters.applicationName, '$_', pipeline().parameters.region, if(or(equals(coalesce(pipeline().parameters.datasetName, ''), ''), equals(pipeline().parameters.datasetName, 'null')), '', concat('_', pipeline().parameters.datasetName)), if(equals(variables('dataDate'), ''), '', concat('#', variables('dataDate')))), pipeline().parameters.uid)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "SetStatus",
+				"type": "SetVariable",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "status",
+					"value": {
+						"value": "@if(equals(pipeline().parameters.nivel, 'ERROR'), 'KO', 'OK')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "SetModulo",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "SetUID",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "modulo",
+					"value": {
+						"value": "@pipeline().parameters.modulo",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "SetDataDate",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "SetStatus",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "dataDate",
+					"value": {
+						"value": "@if(or(equals(coalesce(pipeline().parameters.dataDate, ''), ''), equals(pipeline().parameters.dataDate, 'null')), '', formatDateTime(pipeline().parameters.dataDate, 'yyyy/MM/dd'))",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "LogTypeConditionError",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "PostLogApi",
+						"dependencyConditions": [
+							"Succeeded",
+							"Failed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@equals(pipeline().parameters.nivel, 'ERROR')",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "EndOperationalLogPipeline",
+							"description": "This activity allows the process to always end successfully and thus not block any other pipeline that is using it, in case of call to api returns an error",
+							"type": "Wait",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"waitTimeInSeconds": 1
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "PostAdfError",
+							"type": "WebActivity",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"url": {
+									"value": "@concat('https://coreutils', replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), 'akcore.cloudapp.repsol.com/dap-core-extraction-utils/adf-error')",
+									"type": "Expression"
+								},
+								"method": "POST",
+								"headers": {
+									"Content-Type": "application/json"
+								},
+								"body": {
+									"value": "@json(concat('{\"error_message\": \"', variables('message'), '\"}'))",
+									"type": "Expression"
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "SetDataset",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "SetDataDate",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "dataset",
+					"value": {
+						"value": "@if(empty(pipeline().parameters.datasetIn), concat(',\"DATASET\":\"', pipeline().parameters.datasetName,'\"'), concat(',\"DATASETS_IN\":', replace(replace(replace(string(pipeline().parameters.datasetIn), '\"{', '{'), '}\"','}'), '\\\"', '\"'), ',\"DATASETS_OUT\":', replace(replace(replace(string(pipeline().parameters.datasetOut), '\"{', '{'), '}\"','}'), '\\\"', '\"')))",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "SetLinage",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "SetDataset",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "lineage",
+					"value": {
+						"value": "@if(empty(pipeline().parameters.lineageData), '', concat(',\"LINEAGE_DATA\":', replace(replace(replace(string(pipeline().parameters.lineageData), '\"{', '{'), '}\"','}'), '\\\"', '\"')))",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "SetExtraFields",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "SetLinage",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "extraFields",
+					"value": {
+						"value": "@if(empty(pipeline().parameters.extraFields), '', concat(',',pipeline().parameters.extraFields))",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "MessageMap",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "SetExtraFields",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "messageMap",
+					"value": {
+						"value": "@string(json('{\n\"If Condition StructuredThe expression bool(activity(GetGovernanceMetadata).output.datasets[0].structured) cannot be evaluated because array index 0 cannot be selected from empty array.\" : \"Datasets available for extraction not found\"\n}'))",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "SetMessageFromDictIfExists",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "MessageMap",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@and(not(empty(pipeline().parameters.message)),contains(json(variables('messageMap')), replace(string(pipeline().parameters.message), '''', '')))",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "FormatMessage",
+							"type": "SetVariable",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "message",
+								"value": {
+									"value": "@coalesce(string(pipeline().parameters.message), '')",
+									"type": "Expression"
+								}
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "SetMessageFromDict",
+							"type": "SetVariable",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "message",
+								"value": {
+									"value": "@json(variables('messageMap'))[replace(replace(pipeline().parameters.message, '''', ''),'\"','')]",
+									"type": "Expression"
+								}
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"nivel": {
+				"type": "string",
+				"defaultValue": "INFO"
+			},
+			"modulo": {
+				"type": "string"
+			},
+			"pipelineName": {
+				"type": "string"
+			},
+			"logType": {
+				"type": "string"
+			},
+			"applicationName": {
+				"type": "string"
+			},
+			"dataDate": {
+				"type": "string"
+			},
+			"datasetName": {
+				"type": "string"
+			},
+			"region": {
+				"type": "string"
+			},
+			"message": {
+				"type": "string"
+			},
+			"sourceType": {
+				"type": "string"
+			},
+			"uid": {
+				"type": "string"
+			},
+			"parentUid": {
+				"type": "string"
+			},
+			"datasetIn": {
+				"type": "array"
+			},
+			"datasetOut": {
+				"type": "array"
+			},
+			"lineageData": {
+				"type": "array"
+			},
+			"extraFields": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"payload": {
+				"type": "String"
+			},
+			"user": {
+				"type": "String",
+				"defaultValue": "datafactory"
+			},
+			"uid": {
+				"type": "String"
+			},
+			"status": {
+				"type": "String"
+			},
+			"modulo": {
+				"type": "String"
+			},
+			"dataDate": {
+				"type": "String"
+			},
+			"dataset": {
+				"type": "String"
+			},
+			"keyVaultSuffix": {
+				"type": "String",
+				"defaultValue": "fcoexpyk"
+			},
+			"functionAppUrl": {
+				"type": "String",
+				"defaultValue": "@concat(replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), 'fcoexpy')"
+			},
+			"functionKey": {
+				"type": "String",
+				"defaultValue": "function-core-adfError-key"
+			},
+			"lineage": {
+				"type": "String"
+			},
+			"extraFields": {
+				"type": "String"
+			},
+			"message": {
+				"type": "String"
+			},
+			"messageMap": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "utils"
+		},
+		"annotations": [],
+		"lastPublishTime": "2021-03-04T12:10:39Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

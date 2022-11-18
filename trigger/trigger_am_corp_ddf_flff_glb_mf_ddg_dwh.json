@@ -1,0 +1,39 @@
+{
+	"name": "trigger_am_corp_ddf_flff_glb_mf_ddg_dwh",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "DdgPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"processId": "$AM_CORP_DDF_FLFF$_financial_looking_forward_forecast-ddg-dwh",
+					"referenceDate": "@formatDateTime(convertFromUtc(trigger().startTime, 'UTC'),'yyyy/MM/dd')"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2021-04-23T01:00:00Z",
+				"timeZone": "UTC",
+				"schedule": {
+					"minutes": [
+						0
+					],
+					"hours": [
+						10,
+						12,
+						16,
+						21
+					]
+				}
+			}
+		}
+	}
+}

@@ -1,0 +1,40 @@
+{
+	"name": "trigger_ap_ref_pi_esp_skcpu02pi_fillgaps_stats",
+	"properties": {
+		"description": "Trigger diario estadísticos Puertollano Pre rellenado de huecos",
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "PISystemFillGapsPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "AP_REF_PI",
+					"region": "ESP",
+					"piServer": "SKCPU02PI",
+					"mode": "stats",
+					"interval": "1d"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2021-04-28T10:41:00",
+				"timeZone": "Romance Standard Time",
+				"schedule": {
+					"minutes": [
+						30
+					],
+					"hours": [
+						14
+					]
+				}
+			}
+		}
+	}
+}

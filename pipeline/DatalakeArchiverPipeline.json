@@ -1,0 +1,174 @@
+{
+	"name": "DatalakeArchiverPipeline",
+	"properties": {
+		"description": "Si el parámetro \"deltaEnabled\" es false, se hace una copia completa de los directorios indicados en \"rootFolders\" para la \"bussinesUnit indicada.\n\nEn caso de que \"deltaEnabled\" sea true, se pueden dejar las fechas vacías para que de forma automática calcule el día anterior para hacer la copia. Y también se podrían indicar unas fechas concretas de inicio/fin sobre las que se desea realizar la copia.",
+		"activities": [
+			{
+				"name": "Set deltaStart",
+				"type": "SetVariable",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "deltaStart",
+					"value": {
+						"value": "@if(pipeline().parameters.deltaEnabled, if(equals(coalesce(pipeline().parameters.deltaStart, ''), ''), startOfDay(adddays(utcnow(), -1)), startOfDay(pipeline().parameters.deltaStart)), '')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set deltaEnd",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Set deltaStart",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "deltaEnd",
+					"value": {
+						"value": "@if(pipeline().parameters.deltaEnabled, if(equals(coalesce(pipeline().parameters.deltaEnd, ''), ''), startOfDay(utcnow()), startOfDay(pipeline().parameters.deltaEnd)), '')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set rootFolders",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Set deltaEnd",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "rootFolders",
+					"value": {
+						"value": "@if(equals(coalesce(pipeline().parameters.rootFolders, ''), ''), 'raw,processed,ddg,sanited,staging', pipeline().parameters.rootFolders)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "IfDeltaEnabled",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Set rootFolders",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@pipeline().parameters.deltaEnabled",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "DatalakeArchiverCopyFull",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "DatalakeArchiverCopyFullPipeline",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"rootFolders": {
+										"value": "@variables('rootFolders')",
+										"type": "Expression"
+									},
+									"businessUnit": {
+										"value": "@pipeline().parameters.businessUnit",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "DatalakeArchiverGetModifiedFolders",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "DatalakeArchiverGetModifiedFoldersPipeline",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"deltaStart": {
+										"value": "@variables('deltaStart')",
+										"type": "Expression"
+									},
+									"deltaEnd": {
+										"value": "@variables('deltaEnd')",
+										"type": "Expression"
+									},
+									"rootFolders": {
+										"value": "@variables('rootFolders')",
+										"type": "Expression"
+									},
+									"businessUnit": {
+										"value": "@pipeline().parameters.businessUnit",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"businessUnit": {
+				"type": "string",
+				"defaultValue": "com"
+			},
+			"deltaEnabled": {
+				"type": "bool",
+				"defaultValue": true
+			},
+			"deltaStart": {
+				"type": "string"
+			},
+			"deltaEnd": {
+				"type": "string"
+			},
+			"rootFolders": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"deltaStart": {
+				"type": "String"
+			},
+			"deltaEnd": {
+				"type": "String"
+			},
+			"rootFolders": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "archiver"
+		},
+		"annotations": [],
+		"lastPublishTime": "2020-06-09T08:32:03Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

@@ -1,0 +1,36 @@
+{
+  "name": "trigger_am_ref_rediot_temperatura_glb_copy",
+  "properties": {
+    "annotations": [],
+    "runtimeState": "Stopped",
+    "pipelines": [
+      {
+        "pipelineReference": {
+          "referenceName": "DdgPipeline",
+          "type": "PipelineReference"
+        },
+        "parameters": {
+          "processId": "$AM_REF_REDIOT$_rotativos-ddg-temperatura",
+          "referenceDate": "@formatDateTime(addDays(convertFromUtc(trigger().startTime, 'Romance Standard Time'), -1),'yyyy/MM/dd')"
+        }
+      }
+    ],
+    "type": "ScheduleTrigger",
+    "typeProperties": {
+      "recurrence": {
+        "frequency": "Day",
+        "interval": 1,
+        "startTime": "2021-01-01T00:30:00Z",
+        "timeZone": "UTC",
+        "schedule": {
+          "minutes": [
+            30
+          ],
+          "hours": [
+            2
+          ]
+        }
+      }
+    }
+  }
+}

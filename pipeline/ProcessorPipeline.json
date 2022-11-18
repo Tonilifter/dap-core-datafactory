@@ -1,0 +1,1210 @@
+{
+	"name": "ProcessorPipeline",
+	"properties": {
+		"activities": [
+			{
+				"name": "GetMetadata",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "OperationaLogStart",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": {
+							"value": "@if(equals(pipeline().parameters.datasetName,'*'),concat('SELECT * FROM dbo.processor WHERE application_name = ''', pipeline().parameters.applicationName,''' AND region = ''', pipeline().parameters.region,''' AND is_active = 1', if(empty(pipeline().parameters.processor_id), '', concat(' AND next_process = ''', pipeline().parameters.processor_id, '''')),concat(' AND package_name = ''', pipeline().parameters.package,  '''')),concat('SELECT * FROM dbo.processor WHERE application_name = ''', pipeline().parameters.applicationName,''' AND region = ''', pipeline().parameters.region, ''' AND dataset_name IN (', replace(replace(replace(string(split(pipeline().parameters.datasetName,',')),'\"',''''),'[',''),']',''),') AND is_active = 1', if(empty(pipeline().parameters.processor_id), '', concat(' AND next_process = ''', pipeline().parameters.processor_id, '''')), concat(' AND package_name = ''', pipeline().parameters.package, '''')))",
+							"type": "Expression"
+						},
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "AzureSqlDataset",
+						"type": "DatasetReference",
+						"parameters": {
+							"tableName": "dbo.processor",
+							"secretName": "db-metadata-secret"
+						}
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "CallProcessors",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "GetMetadata",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('GetMetadata').output.value",
+						"type": "Expression"
+					},
+					"isSequential": true,
+					"activities": [
+						{
+							"name": "Switch",
+							"type": "Switch",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"on": {
+									"value": "@item().mode",
+									"type": "Expression"
+								},
+								"cases": [
+									{
+										"value": "Function",
+										"activities": [
+											{
+												"name": "Execute Function",
+												"type": "ExecutePipeline",
+												"dependsOn": [],
+												"userProperties": [],
+												"typeProperties": {
+													"pipeline": {
+														"referenceName": "Azure Function Abstract",
+														"type": "PipelineReference"
+													},
+													"waitOnCompletion": true,
+													"parameters": {
+														"functionAppUrl": {
+															"value": "@item().function_url",
+															"type": "Expression"
+														},
+														"functionKey": {
+															"value": "@item().function_key",
+															"type": "Expression"
+														},
+														"functionName": {
+															"value": "@item().function_name",
+															"type": "Expression"
+														},
+														"functionBody": {
+															"value": "@item().function_body",
+															"type": "Expression"
+														},
+														"DateData": {
+															"value": "@pipeline().parameters.extractionDate",
+															"type": "Expression"
+														}
+													}
+												}
+											},
+											{
+												"name": "OperationaLogErrorExecuteFunction",
+												"type": "ExecutePipeline",
+												"dependsOn": [
+													{
+														"activity": "Execute Function",
+														"dependencyConditions": [
+															"Failed"
+														]
+													}
+												],
+												"userProperties": [],
+												"typeProperties": {
+													"pipeline": {
+														"referenceName": "OperationalLogPipeline",
+														"type": "PipelineReference"
+													},
+													"waitOnCompletion": true,
+													"parameters": {
+														"nivel": "ERROR",
+														"modulo": "PROCESSOR",
+														"pipelineName": {
+															"value": "@pipeline().Pipeline",
+															"type": "Expression"
+														},
+														"logType": "END",
+														"applicationName": {
+															"value": "@pipeline().parameters.applicationName",
+															"type": "Expression"
+														},
+														"region": {
+															"value": "@pipeline().parameters.region",
+															"type": "Expression"
+														},
+														"message": {
+															"value": "@concat('Execute Function ', activity('Execute Function').error.message)",
+															"type": "Expression"
+														},
+														"uid": {
+															"value": "@variables('uid')",
+															"type": "Expression"
+														},
+														"parentUid": {
+															"value": "@pipeline().parameters.parentUid",
+															"type": "Expression"
+														}
+													}
+												}
+											},
+											{
+												"name": "OperationaLogAFEnd",
+												"type": "ExecutePipeline",
+												"dependsOn": [
+													{
+														"activity": "Execute Function",
+														"dependencyConditions": [
+															"Succeeded"
+														]
+													}
+												],
+												"userProperties": [],
+												"typeProperties": {
+													"pipeline": {
+														"referenceName": "OperationalLogPipeline",
+														"type": "PipelineReference"
+													},
+													"waitOnCompletion": false,
+													"parameters": {
+														"nivel": "INFO",
+														"modulo": "PROCESSOR",
+														"pipelineName": {
+															"value": "@pipeline().Pipeline",
+															"type": "Expression"
+														},
+														"logType": "END",
+														"applicationName": {
+															"value": "@pipeline().parameters.applicationName",
+															"type": "Expression"
+														},
+														"dataDate": {
+															"value": "@pipeline().parameters.extractionDate",
+															"type": "Expression"
+														},
+														"region": {
+															"value": "@pipeline().parameters.region",
+															"type": "Expression"
+														},
+														"uid": {
+															"value": "@variables('uid')",
+															"type": "Expression"
+														},
+														"parentUid": {
+															"value": "@pipeline().parameters.parentUid",
+															"type": "Expression"
+														}
+													}
+												}
+											}
+										]
+									},
+									{
+										"value": "Spark",
+										"activities": [
+											{
+												"name": "ProcessorSpark",
+												"type": "DatabricksSparkJar",
+												"dependsOn": [],
+												"policy": {
+													"timeout": "7.00:00:00",
+													"retry": 0,
+													"retryIntervalInSeconds": 30,
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"mainClassName": {
+														"value": "@{item().library_main_class}",
+														"type": "Expression"
+													},
+													"parameters": [
+														"-i",
+														"@{item().next_process}",
+														"-a",
+														"@pipeline().parameters.applicationName",
+														"-r",
+														"@pipeline().parameters.region",
+														"-d",
+														"@if(empty(pipeline().parameters.extractionDate), 'null', pipeline().parameters.extractionDate)",
+														"-b",
+														"@{item().business_unit}",
+														"-e",
+														"@{if(empty(item().parameters),'null',item().parameters)}",
+														"-t",
+														"@{if(empty(pipeline().parameters.ts),'null',pipeline().parameters.ts)}",
+														"-p",
+														"@{if(empty(pipeline().parameters.parentUid),'N/A',pipeline().parameters.parentUid)}",
+														"-u",
+														"@concat('PROCESSOR#', pipeline().parameters.applicationName, '_', pipeline().parameters.region, if(equals(item().dataset_name,'*'),'', concat('_' ,item().dataset_name)),  '#' , pipeline().parameters.extractionDate, '#' , utcnow('yyyyMMddHHmmssfff'))"
+													],
+													"libraries": {
+														"value": "@json(concat(concat('[{\"jar\": \"dbfs:/FileStore/job-jars-ci/', item().library_path), '\"}]'))",
+														"type": "Expression"
+													}
+												},
+												"linkedServiceName": {
+													"referenceName": "AzureDatabricksDynamicLinkedService",
+													"type": "LinkedServiceReference",
+													"parameters": {
+														"workers": {
+															"value": "@{if(empty(string(item().min_workers)),2,string(item().min_workers))}:@{if(empty(string(item().max_workers)),8,string(item().max_workers))}",
+															"type": "Expression"
+														},
+														"token": "dbcoar-databricks-token",
+														"clusterVersion": "6.4.x-esr-scala2.11"
+													}
+												}
+											},
+											{
+												"name": "OperationaLogErrorProcessorSpark",
+												"type": "ExecutePipeline",
+												"dependsOn": [
+													{
+														"activity": "ProcessorSpark",
+														"dependencyConditions": [
+															"Failed"
+														]
+													}
+												],
+												"userProperties": [],
+												"typeProperties": {
+													"pipeline": {
+														"referenceName": "OperationalLogPipeline",
+														"type": "PipelineReference"
+													},
+													"waitOnCompletion": true,
+													"parameters": {
+														"nivel": "ERROR",
+														"modulo": "PROCESSOR",
+														"pipelineName": {
+															"value": "@pipeline().Pipeline",
+															"type": "Expression"
+														},
+														"logType": "END",
+														"applicationName": {
+															"value": "@pipeline().parameters.applicationName",
+															"type": "Expression"
+														},
+														"dataDate": {
+															"value": "@pipeline().parameters.extractionDate",
+															"type": "Expression"
+														},
+														"datasetName": {
+															"value": "@pipeline().parameters.datasetName",
+															"type": "Expression"
+														},
+														"region": {
+															"value": "@pipeline().parameters.region",
+															"type": "Expression"
+														},
+														"message": {
+															"value": "@concat('ProcessorSpark', activity('ProcessorSpark').error.message)",
+															"type": "Expression"
+														},
+														"sourceType": {
+															"value": "@trim('')",
+															"type": "Expression"
+														},
+														"uid": {
+															"value": "@variables('uid')",
+															"type": "Expression"
+														},
+														"parentUid": {
+															"value": "@pipeline().parameters.parentUid",
+															"type": "Expression"
+														},
+														"datasetIn": {
+															"value": "@trim('')",
+															"type": "Expression"
+														},
+														"datasetOut": {
+															"value": "@trim('')",
+															"type": "Expression"
+														}
+													}
+												}
+											}
+										]
+									},
+									{
+										"value": "Notebook",
+										"activities": [
+											{
+												"name": "OperationaLogErrorProcessorNotebook",
+												"type": "ExecutePipeline",
+												"dependsOn": [
+													{
+														"activity": "ProcessorNotebook",
+														"dependencyConditions": [
+															"Failed"
+														]
+													}
+												],
+												"userProperties": [],
+												"typeProperties": {
+													"pipeline": {
+														"referenceName": "OperationalLogPipeline",
+														"type": "PipelineReference"
+													},
+													"waitOnCompletion": true,
+													"parameters": {
+														"nivel": "ERROR",
+														"modulo": "PROCESSOR",
+														"pipelineName": {
+															"value": "@pipeline().Pipeline",
+															"type": "Expression"
+														},
+														"logType": "END",
+														"applicationName": {
+															"value": "@pipeline().parameters.applicationName",
+															"type": "Expression"
+														},
+														"dataDate": {
+															"value": "@pipeline().parameters.extractionDate",
+															"type": "Expression"
+														},
+														"datasetName": {
+															"value": "@pipeline().parameters.datasetName",
+															"type": "Expression"
+														},
+														"region": {
+															"value": "@pipeline().parameters.region",
+															"type": "Expression"
+														},
+														"message": {
+															"value": "@concat('ProcessorNotebook', activity('ProcessorNotebook').error.message)",
+															"type": "Expression"
+														},
+														"sourceType": {
+															"value": "@trim('')",
+															"type": "Expression"
+														},
+														"uid": {
+															"value": "@variables('uid')",
+															"type": "Expression"
+														},
+														"parentUid": {
+															"value": "@pipeline().parameters.parentUid",
+															"type": "Expression"
+														},
+														"datasetIn": {
+															"value": "@trim('')",
+															"type": "Expression"
+														},
+														"datasetOut": {
+															"value": "@trim('')",
+															"type": "Expression"
+														}
+													}
+												}
+											},
+											{
+												"name": "ProcessorNotebook",
+												"type": "DatabricksNotebook",
+												"dependsOn": [],
+												"policy": {
+													"timeout": "7.00:00:00",
+													"retry": 0,
+													"retryIntervalInSeconds": 30,
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"notebookPath": {
+														"value": "@item().notebook_path",
+														"type": "Expression"
+													},
+													"baseParameters": {
+														"dataDate": {
+															"value": "@pipeline().parameters.extractionDate",
+															"type": "Expression"
+														},
+														"parameters": {
+															"value": "@{if(empty(item().parameters),'null',item().parameters)}",
+															"type": "Expression"
+														}
+													},
+													"libraries": [
+														{
+															"pypi": {
+																"package": "azure-identity"
+															}
+														},
+														{
+															"pypi": {
+																"package": "azure-keyvault-secrets"
+															}
+														},
+														{
+															"pypi": {
+																"package": "azure-functions==1.0.4"
+															}
+														},
+														{
+															"pypi": {
+																"package": "azure-keyvault==1.1.0"
+															}
+														},
+														{
+															"pypi": {
+																"package": "azure-datalake-store==0.0.48"
+															}
+														},
+														{
+															"pypi": {
+																"package": "pandas==0.25.3"
+															}
+														},
+														{
+															"pypi": {
+																"package": "pdfminer.six==20181108"
+															}
+														},
+														{
+															"pypi": {
+																"package": "pyarrow==0.15.1"
+															}
+														}
+													]
+												},
+												"linkedServiceName": {
+													"referenceName": "AzureDatabricksDynamicLinkedService",
+													"type": "LinkedServiceReference",
+													"parameters": {
+														"workers": "2:8",
+														"token": "dbcoar-databricks-token",
+														"clusterVersion": "6.4.x-esr-scala2.11"
+													}
+												}
+											},
+											{
+												"name": "OperationaLogNBEnd",
+												"type": "ExecutePipeline",
+												"dependsOn": [
+													{
+														"activity": "ProcessorNotebook",
+														"dependencyConditions": [
+															"Succeeded"
+														]
+													}
+												],
+												"userProperties": [],
+												"typeProperties": {
+													"pipeline": {
+														"referenceName": "OperationalLogPipeline",
+														"type": "PipelineReference"
+													},
+													"waitOnCompletion": false,
+													"parameters": {
+														"nivel": "INFO",
+														"modulo": "PROCESSOR",
+														"pipelineName": {
+															"value": "@pipeline().Pipeline",
+															"type": "Expression"
+														},
+														"logType": "END",
+														"applicationName": {
+															"value": "@pipeline().parameters.applicationName",
+															"type": "Expression"
+														},
+														"dataDate": {
+															"value": "@pipeline().parameters.extractionDate",
+															"type": "Expression"
+														},
+														"region": {
+															"value": "@pipeline().parameters.region",
+															"type": "Expression"
+														},
+														"uid": {
+															"value": "@variables('uid')",
+															"type": "Expression"
+														},
+														"parentUid": {
+															"value": "@pipeline().parameters.parentUid",
+															"type": "Expression"
+														}
+													}
+												}
+											}
+										]
+									},
+									{
+										"value": "DfCopy",
+										"activities": [
+											{
+												"name": "ProcessorCopyToSilver",
+												"type": "ExecutePipeline",
+												"dependsOn": [],
+												"userProperties": [],
+												"typeProperties": {
+													"pipeline": {
+														"referenceName": "ProcessorCopyToSilver",
+														"type": "PipelineReference"
+													},
+													"waitOnCompletion": true,
+													"parameters": {
+														"business_unit": {
+															"value": "@{item().business_unit}",
+															"type": "Expression"
+														},
+														"layer": {
+															"value": "@{item().copy_df_source_layer}",
+															"type": "Expression"
+														},
+														"app": {
+															"value": "@{item().application_name}",
+															"type": "Expression"
+														},
+														"region": {
+															"value": "@{item().region}",
+															"type": "Expression"
+														},
+														"dataset": {
+															"value": "@{item().dataset_name}",
+															"type": "Expression"
+														},
+														"datadate": {
+															"value": "@pipeline().parameters.extractionDate",
+															"type": "Expression"
+														},
+														"target_type": {
+															"value": "@{item().copy_df_target_type}",
+															"type": "Expression"
+														},
+														"source_type": {
+															"value": "@{item().copy_df_source_type}",
+															"type": "Expression"
+														},
+														"parent_uid": {
+															"value": "@variables('uid')",
+															"type": "Expression"
+														},
+														"p_folder_path": {
+															"value": "@pipeline().parameters.p_folder_path",
+															"type": "Expression"
+														},
+														"p_file_name": {
+															"value": "@pipeline().parameters.p_file_name",
+															"type": "Expression"
+														},
+														"is_consolidated": {
+															"value": "@bool(item().is_consolidated)",
+															"type": "Expression"
+														},
+														"overwrite_file": {
+															"value": "@bool(item().overwrite_file)",
+															"type": "Expression"
+														}
+													}
+												}
+											}
+										]
+									}
+								],
+								"defaultActivities": [
+									{
+										"name": "OperationaLogErrorSelectingMode",
+										"type": "ExecutePipeline",
+										"dependsOn": [],
+										"userProperties": [],
+										"typeProperties": {
+											"pipeline": {
+												"referenceName": "OperationalLogPipeline",
+												"type": "PipelineReference"
+											},
+											"waitOnCompletion": true,
+											"parameters": {
+												"nivel": "ERROR",
+												"modulo": "PROCESSOR",
+												"pipelineName": {
+													"value": "@pipeline().Pipeline",
+													"type": "Expression"
+												},
+												"logType": "ERROR",
+												"message": {
+													"value": "Not valid mode found, please select a valid mode",
+													"type": "Expression"
+												},
+												"uid": {
+													"value": "@variables('uid')",
+													"type": "Expression"
+												},
+												"parentUid": {
+													"value": "@pipeline().parameters.parentUid",
+													"type": "Expression"
+												}
+											}
+										}
+									}
+								]
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "OperationaLogStart",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "OperationalLogPipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": false,
+					"parameters": {
+						"nivel": "INFO",
+						"modulo": "PROCESSOR",
+						"pipelineName": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"logType": "START",
+						"applicationName": {
+							"value": "@pipeline().parameters.applicationName",
+							"type": "Expression"
+						},
+						"dataDate": {
+							"value": "@pipeline().parameters.extractionDate",
+							"type": "Expression"
+						},
+						"region": {
+							"value": "@pipeline().parameters.region",
+							"type": "Expression"
+						},
+						"uid": {
+							"value": "@variables('uid')",
+							"type": "Expression"
+						},
+						"parentUid": {
+							"value": "@pipeline().parameters.parentUid",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "OperationaLogErrorGetMetadata",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "GetMetadata",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "OperationalLogPipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"nivel": "ERROR",
+						"modulo": "PROCESSOR",
+						"pipelineName": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"logType": "END",
+						"applicationName": {
+							"value": "@pipeline().parameters.applicationName",
+							"type": "Expression"
+						},
+						"region": {
+							"value": "@pipeline().parameters.region",
+							"type": "Expression"
+						},
+						"message": {
+							"value": "@concat('GetMetadata: ', activity('GetMetadata').error.message)",
+							"type": "Expression"
+						},
+						"uid": {
+							"value": "@variables('uid')",
+							"type": "Expression"
+						},
+						"parentUid": {
+							"value": "@pipeline().parameters.parentUid",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "OperationaLogEnd",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "CallProcessors",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "OperationalLogPipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": false,
+					"parameters": {
+						"nivel": "INFO",
+						"modulo": "PROCESSOR",
+						"pipelineName": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"logType": "END",
+						"applicationName": {
+							"value": "@pipeline().parameters.applicationName",
+							"type": "Expression"
+						},
+						"dataDate": {
+							"value": "@pipeline().parameters.extractionDate",
+							"type": "Expression"
+						},
+						"region": {
+							"value": "@pipeline().parameters.region",
+							"type": "Expression"
+						},
+						"uid": {
+							"value": "@variables('uid')",
+							"type": "Expression"
+						},
+						"parentUid": {
+							"value": "@pipeline().parameters.parentUid",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "GetAppIdToken",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "OperationaLogStart",
+						"dependencyConditions": [
+							"Skipped"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": true,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@concat('https://', replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), 'corekv.vault.azure.net/secrets/adapp-extract-id?api-version=7.0')",
+						"type": "Expression"
+					},
+					"method": "GET",
+					"authentication": {
+						"type": "MSI",
+						"resource": "https://vault.azure.net"
+					}
+				}
+			},
+			{
+				"name": "Set appIdToken",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "GetAppIdToken",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "appIdToken",
+					"value": {
+						"value": "@activity('GetAppIdToken').output.value",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "GetAppSecretToken",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "OperationaLogStart",
+						"dependencyConditions": [
+							"Skipped"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": true,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@concat('https://', replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), 'corekv.vault.azure.net/secrets/adsp-extract-secret?api-version=7.0')",
+						"type": "Expression"
+					},
+					"method": "GET",
+					"authentication": {
+						"type": "MSI",
+						"resource": "https://vault.azure.net"
+					}
+				}
+			},
+			{
+				"name": "Set appSecretToken",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "GetAppSecretToken",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "appSecretToken",
+					"value": {
+						"value": "@activity('GetAppSecretToken').output.value",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "HttpToken",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "Set appSecretToken",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Set appIdToken",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": true,
+					"secureInput": true
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": "https://login.microsoftonline.com/0a25214f-ee52-483c-b96b-dc79f3227a6f/oauth2/v2.0/token",
+					"method": "POST",
+					"headers": {
+						"Content-Type": "application/x-www-form-urlencoded"
+					},
+					"body": {
+						"value": "@concat('client_id=', variables('appIdToken'), '&client_secret=',  encodeUriComponent(variables('appSecretToken')), '&grant_type=client_credentials&scope=https://graph.microsoft.com/.default')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set httpToken",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "HttpToken",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "httpToken",
+					"value": {
+						"value": "@activity('HttpToken').output.access_token",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "If datasetName",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Set httpToken",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@equals(pipeline().parameters.datasetName,'*')",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "GetDatasetSilver",
+							"type": "WebActivity",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": true
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"url": {
+									"value": "@concat('https://', replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), 'akgov.cloudapp.repsol.com/governance-datacatalog/api/v2/finder/core/datasetSilver?', 'applicationName=', pipeline().parameters.applicationName, '&', 'region=', \n pipeline().parameters.region, '&', 'pageNumber=0&size=200', '&', 'datasetNames=', pipeline().parameters.datasetName)",
+									"type": "Expression"
+								},
+								"method": "GET",
+								"headers": {
+									"Authorization": {
+										"value": "@concat('Bearer ', variables('httpToken'))",
+										"type": "Expression"
+									},
+									"Content-Type": "application.json"
+								}
+							}
+						},
+						{
+							"name": "SetJsonSilver",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "GetDatasetSilver",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "out",
+								"value": {
+									"value": "@json(activity('GetDatasetSilver').output.Response)",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Execute AuxCopyDf",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "SetJsonSilver",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "ProcessorAuxCopyToSilverGov",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"p_folder_path": {
+										"value": "@pipeline().parameters.p_folder_path",
+										"type": "Expression"
+									},
+									"p_file_name": {
+										"value": "@pipeline().parameters.p_file_name",
+										"type": "Expression"
+									},
+									"out_getmetadata": {
+										"value": "@variables('out')",
+										"type": "Expression"
+									},
+									"extractionDate": {
+										"value": "@pipeline().parameters.extractionDate",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "GetDatasetSilverList",
+							"type": "WebActivity",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": true
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"url": {
+									"value": "@concat('https://', replace(replace(pipeline().DataFactory, 'dfcore', ''),'ds', ''), 'akgov.cloudapp.repsol.com/governance-datacatalog/api/v2/finder/core/datasetSilver/list?', 'applicationName=', pipeline().parameters.applicationName, '&', 'region=', \n pipeline().parameters.region, '&', 'pageNumber=0&size=200')",
+									"type": "Expression"
+								},
+								"method": "GET",
+								"headers": {
+									"Authorization": {
+										"value": "@concat('Bearer ', variables('httpToken'))",
+										"type": "Expression"
+									},
+									"Content-Type": "application.json"
+								}
+							}
+						},
+						{
+							"name": "SetJsonSilverList",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "GetDatasetSilverList",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "out",
+								"value": {
+									"value": "@json(activity('GetDatasetSilverList').output.Response)",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Execute AuxCopyDfList",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "SetJsonSilverList",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "ProcessorAuxCopyToSilverGov",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"p_folder_path": {
+										"value": "@pipeline().parameters.p_folder_path",
+										"type": "Expression"
+									},
+									"p_file_name": {
+										"value": "@pipeline().parameters.p_file_name",
+										"type": "Expression"
+									},
+									"out_getmetadata": {
+										"value": "@variables('out')",
+										"type": "Expression"
+									},
+									"extractionDate": {
+										"value": "@pipeline().parameters.extractionDate",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"applicationName": {
+				"type": "string",
+				"defaultValue": "crackspread_bloomberg"
+			},
+			"region": {
+				"type": "string",
+				"defaultValue": "GLB"
+			},
+			"datasetName": {
+				"type": "string",
+				"defaultValue": "*"
+			},
+			"extractionDate": {
+				"type": "string"
+			},
+			"processor_id": {
+				"type": "string"
+			},
+			"ts": {
+				"type": "string"
+			},
+			"parentUid": {
+				"type": "string"
+			},
+			"p_folder_path": {
+				"type": "string"
+			},
+			"p_file_name": {
+				"type": "string"
+			},
+			"package": {
+				"type": "string",
+				"defaultValue": "*"
+			}
+		},
+		"variables": {
+			"uid": {
+				"type": "String",
+				"defaultValue": "@concat('PROCESSOR#', if(empty(pipeline().parameters.parentUid),concat('$', pipeline().parameters.applicationName, '$_', pipeline().parameters.region), split(pipeline().parameters.parentUid, '#')[1]), '#' , pipeline().parameters.extractionDate, '#' , utcnow('yyyyMMddHHmmssfff'))"
+			},
+			"appIdToken": {
+				"type": "String"
+			},
+			"appSecretToken": {
+				"type": "String"
+			},
+			"httpToken": {
+				"type": "String"
+			},
+			"out": {
+				"type": "Array"
+			}
+		},
+		"folder": {
+			"name": "processor"
+		},
+		"annotations": []
+	}
+}

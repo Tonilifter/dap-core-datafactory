@@ -1,0 +1,36 @@
+{
+    "Microsoft.DataFactory/factories/integrationRuntimes": {
+        "properties": {
+            "typeProperties":   {
+                    "linkedInfo": {
+                        "resourceId": "="
+                    }
+                }
+        }
+    },
+    "Microsoft.DataFactory/factories/triggers":{
+        "properties": {
+            "type": "BlobEventsTrigger",
+            "typeProperties":   {
+                    "scope": "="
+                }
+        }
+    },
+    "Microsoft.DataFactory/factories/linkedServices":{
+        "AzureBlobStorage":{
+            "properties": {
+                "typeProperties": {
+                    "connectionString": "=",
+                    "serviceEndpoint": "="
+                }
+            }
+        },
+        "AzureKeyVault":{
+            "properties": {
+                "typeProperties": {
+                    "baseUrl": "="
+                }
+            }
+        }
+    }
+}

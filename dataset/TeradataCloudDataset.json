@@ -1,0 +1,56 @@
+{
+	"name": "TeradataCloudDataset",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "TeradataCloudLinkedService",
+			"type": "LinkedServiceReference",
+			"parameters": {
+				"server": {
+					"value": "@dataset().server",
+					"type": "Expression"
+				},
+				"user": {
+					"value": "@dataset().userName",
+					"type": "Expression"
+				},
+				"secretName": {
+					"value": "@dataset().secretName",
+					"type": "Expression"
+				}
+			}
+		},
+		"parameters": {
+			"tableName": {
+				"type": "string"
+			},
+			"secretName": {
+				"type": "string"
+			},
+			"userName": {
+				"type": "string"
+			},
+			"server": {
+				"type": "string"
+			},
+			"dbSchema": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "extraction/databases"
+		},
+		"annotations": [],
+		"type": "TeradataTable",
+		"schema": [],
+		"typeProperties": {
+			"database": {
+				"value": "@dataset().dbSchema",
+				"type": "Expression"
+			},
+			"table": {
+				"value": "@dataset().tableName",
+				"type": "Expression"
+			}
+		}
+	}
+}

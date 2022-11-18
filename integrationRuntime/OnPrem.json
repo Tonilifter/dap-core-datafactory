@@ -1,0 +1,12 @@
+{
+	"name": "OnPrem",
+	"properties": {
+		"type": "SelfHosted",
+		"typeProperties": {
+			"linkedInfo": {
+				"resourceId": "/subscriptions/757633f7-178c-46e4-bdf2-05488423d7c7/resourcegroups/z0euw1sdmrsg015/providers/Microsoft.DataFactory/factories/daplatform0101tdfcoreir/integrationruntimes/OnPremLab",
+				"authorizationType": "Rbac"
+			}
+		}
+	}
+}

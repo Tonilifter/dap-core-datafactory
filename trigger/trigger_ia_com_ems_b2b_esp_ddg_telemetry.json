@@ -1,0 +1,27 @@
+{
+	"name": "trigger_ia_com_ems_b2b_esp_ddg_telemetry",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "DdgPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"processId": "$IA_COM_EMS_B2B$_eliot-ddg-ems"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Hour",
+				"interval": 1,
+				"startTime": "2021-11-18T15:53:00Z",
+				"timeZone": "UTC"
+			}
+		}
+	}
+}

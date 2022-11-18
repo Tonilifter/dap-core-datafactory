@@ -1,0 +1,37 @@
+{
+	"name": "ServiceNowDataset",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "ServiceNowLinkedService",
+			"type": "LinkedServiceReference",
+			"parameters": {
+				"endpoint": {
+					"value": "@dataset().endpoint",
+					"type": "Expression"
+				},
+				"user_secret": {
+					"value": "@dataset().user_secret",
+					"type": "Expression"
+				},
+				"password_secret": {
+					"value": "@dataset().password_secret",
+					"type": "Expression"
+				}
+			}
+		},
+		"parameters": {
+			"endpoint": {
+				"type": "string"
+			},
+			"user_secret": {
+				"type": "string"
+			},
+			"password_secret": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"type": "ServiceNowObject",
+		"schema": []
+	}
+}

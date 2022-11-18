@@ -1,0 +1,48 @@
+{
+	"name": "AzureDataLakeStorageGen2",
+	"properties": {
+		"type": "AzureBlobFS",
+		"annotations": [],
+		"typeProperties": {
+			"url": "https://@{linkedService().storageAccount}.dfs.core.windows.net",
+			"tenant": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "KeyVaultLinkedService",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": "df-dap-tenant-id"
+			},
+			"servicePrincipalId": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "KeyVaultLinkedService",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": "adapp-@{linkedService().servicePrincipal}-id"
+			},
+			"servicePrincipalKey": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "KeyVaultLinkedService",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": "adsp-@{linkedService().servicePrincipal}-secret"
+			}
+		},
+		"parameters": {
+			"storageAccount": {
+				"type": "String",
+				"defaultValue": ""
+			},
+			"servicePrincipal": {
+				"type": "String",
+				"defaultValue": ""
+			}
+		},
+		"connectVia": {
+			"referenceName": "IntegrationRuntimeFreezer",
+			"type": "IntegrationRuntimeReference"
+		}
+	}
+}

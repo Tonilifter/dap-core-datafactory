@@ -1,0 +1,381 @@
+{
+	"name": "DatalakeMigrationGen2Pipeline",
+	"properties": {
+		"activities": [
+			{
+				"name": "Set deltaStart",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "OperationaLogStart",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "deltaStart",
+					"value": {
+						"value": "@if(pipeline().parameters.deltaEnabled, if(equals(coalesce(pipeline().parameters.startDate, ''), ''), formatDateTime(addminutes(utcnow(), -30), 'yyyy-MM-ddTHH:mm'), formatDateTime(pipeline().parameters.startDate, 'yyyy-MM-ddTHH:mm')), '')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set deltaEnd",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "OperationaLogStart",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "deltaEnd",
+					"value": {
+						"value": "@if(pipeline().parameters.deltaEnabled, if(equals(coalesce(pipeline().parameters.endDate, ''), ''), formatDateTime(utcnow(), 'yyyy-MM-ddTHH:mm'), formatDateTime(pipeline().parameters.endDate, 'yyyy-MM-ddTHH:mm')), '')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set layers",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "OperationaLogStart",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "layers",
+					"value": {
+						"value": "@if(equals(coalesce(pipeline().parameters.layers, ''), ''), 'raw,processed,ddg,sanited,staging', pipeline().parameters.layers)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "OperationaLogStart",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "OperationalLogPipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": false,
+					"parameters": {
+						"nivel": "INFO",
+						"modulo": "DL_MIGRATION",
+						"pipelineName": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"logType": "START",
+						"applicationName": {
+							"value": "@pipeline().parameters.businessUnit",
+							"type": "Expression"
+						},
+						"dataDate": {
+							"value": "@formatDateTime(utcnow(), 'yyyy/MM/dd')",
+							"type": "Expression"
+						},
+						"sourceType": "archiver",
+						"uid": {
+							"value": "@concat('DL_ARCHIVER#$', pipeline().parameters.businessUnit, '$#', formatDateTime(utcnow(), 'yyyy/MM/dd'))",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "IfDeltaEnabled",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Set deltaStart",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Set deltaEnd",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Set layers",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@pipeline().parameters.deltaEnabled",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "DatalakeCopyFullGen2Pipeline",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "DatalakeCopyFullGen2Pipeline",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"businessUnit": {
+										"value": "@pipeline().parameters.businessUnit",
+										"type": "Expression"
+									},
+									"layers": {
+										"value": "@variables('layers')",
+										"type": "Expression"
+									},
+									"startDate": {
+										"value": "@variables('deltaStart')",
+										"type": "Expression"
+									},
+									"endDate": {
+										"value": "@variables('deltaEnd')",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "OperationLogErrorArchiverCopyFull",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "DatalakeCopyFullGen2Pipeline",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "OperationalLogPipeline",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"nivel": "ERROR",
+									"modulo": "DL_MIGRATION",
+									"pipelineName": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"logType": "END",
+									"applicationName": {
+										"value": "@pipeline().parameters.businessUnit",
+										"type": "Expression"
+									},
+									"dataDate": {
+										"value": "@formatDateTime(variables('deltaEnd'), 'yyyy/MM/dd')",
+										"type": "Expression"
+									},
+									"message": {
+										"value": "@concat('DatalakeMigrationGen2Pipeline: ', activity('DatalakeCopyFullGen2Pipeline').error.message)",
+										"type": "Expression"
+									},
+									"sourceType": "archiver",
+									"uid": {
+										"value": "@concat('DL_MIGRATION#$', pipeline().parameters.businessUnit, '$#', formatDateTime(variables('deltaEnd'), 'yyyy/MM/dd'))",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "DatalakeCopyDeltaGen2Pipeline",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "DatalakeCopyDeltaGen2Pipeline",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"businessUnit": {
+										"value": "@pipeline().parameters.businessUnit",
+										"type": "Expression"
+									},
+									"startDate": {
+										"value": "@variables('deltaStart')",
+										"type": "Expression"
+									},
+									"endDate": {
+										"value": "@variables('deltaEnd')",
+										"type": "Expression"
+									},
+									"layers": {
+										"value": "@variables('layers')",
+										"type": "Expression"
+									},
+									"sourceFolder": {
+										"value": "@pipeline().parameters.sourceFolder",
+										"type": "Expression"
+									},
+									"sinkContainer": {
+										"value": "@pipeline().parameters.sinkContainer",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "OperationaLogErrorArchiverCopyDeltas",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "DatalakeCopyDeltaGen2Pipeline",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "OperationalLogPipeline",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"nivel": "ERROR",
+									"modulo": "DL_MIGRATION",
+									"pipelineName": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"logType": "END",
+									"applicationName": {
+										"value": "@pipeline().parameters.businessUnit",
+										"type": "Expression"
+									},
+									"dataDate": {
+										"value": "@formatDateTime(variables('deltaEnd'), 'yyyy/MM/dd')",
+										"type": "Expression"
+									},
+									"message": {
+										"value": "@concat('DatalakeMigrationGen2Pipeline: ', activity('DatalakeCopyDeltaGen2Pipeline').error.message)",
+										"type": "Expression"
+									},
+									"sourceType": "archiver",
+									"uid": {
+										"value": "@concat('DL_MIGRATION#$', pipeline().parameters.businessUnit, '$#', formatDateTime(variables('deltaEnd'), 'yyyy/MM/dd'))",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "OperationaLogEnd",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "IfDeltaEnabled",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "OperationalLogPipeline",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": false,
+					"parameters": {
+						"nivel": "INFO",
+						"modulo": "DL_MIGRATION",
+						"pipelineName": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"logType": "END",
+						"applicationName": {
+							"value": "@pipeline().parameters.businessUnit",
+							"type": "Expression"
+						},
+						"dataDate": {
+							"value": "@formatDateTime(variables('deltaEnd'), 'yyyy/MM/dd')",
+							"type": "Expression"
+						},
+						"sourceType": "archiver",
+						"uid": {
+							"value": "@concat('DL_MIGRATION#$', pipeline().parameters.businessUnit, '$#', formatDateTime(variables('deltaEnd'), 'yyyy/MM/dd'))",
+							"type": "Expression"
+						}
+					}
+				}
+			}
+		],
+		"parameters": {
+			"businessUnit": {
+				"type": "string",
+				"defaultValue": "crp"
+			},
+			"layers": {
+				"type": "string"
+			},
+			"deltaEnabled": {
+				"type": "bool",
+				"defaultValue": true
+			},
+			"startDate": {
+				"type": "string"
+			},
+			"endDate": {
+				"type": "string"
+			},
+			"sourceFolder": {
+				"type": "string"
+			},
+			"sinkContainer": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"layers": {
+				"type": "String"
+			},
+			"deltaStart": {
+				"type": "String"
+			},
+			"deltaEnd": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "migration"
+		},
+		"annotations": []
+	}
+}

@@ -1,0 +1,40 @@
+{
+	"name": "trigger_ap_ref_pi_per_sslimlppi01_stats",
+	"properties": {
+		"description": "Trigger diario estadisticos Pampilla",
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "PISystemProcessPipeline",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"applicationName": "AP_REF_PI",
+					"region": "PER",
+					"piServer": "SSLIMLPPI01",
+					"startTime": "y",
+					"endTime": "t",
+					"mode": "stats",
+					"interval": "1d",
+					"historicalExecution": false
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2021-07-20T12:04:00",
+				"timeZone": "Romance Standard Time",
+				"schedule": {
+					"hours": [
+						1
+					]
+				}
+			}
+		}
+	}
+}

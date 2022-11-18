@@ -1,0 +1,35 @@
+{
+	"name": "HttpLinkedService",
+	"properties": {
+		"type": "HttpServer",
+		"annotations": [],
+		"typeProperties": {
+			"url": {
+				"value": "@{linkedService().url}",
+				"type": "Expression"
+			},
+			"userName": "@{linkedService().userName}",
+			"password": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "KeyVaultLinkedService",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": "@{linkedService().secretName}"
+			},
+			"enableServerCertificateValidation": true,
+			"authenticationType": "Basic"
+		},
+		"parameters": {
+			"url": {
+				"type": "String"
+			},
+			"userName": {
+				"type": "String"
+			},
+			"secretName": {
+				"type": "String"
+			}
+		}
+	}
+}

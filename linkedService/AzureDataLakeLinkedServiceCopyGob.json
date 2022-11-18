@@ -1,0 +1,56 @@
+{
+	"name": "AzureDataLakeLinkedServiceCopyGob",
+	"properties": {
+		"type": "AzureDataLakeStore",
+		"annotations": [],
+		"typeProperties": {
+			"dataLakeStoreUri": "https://@{linkedService().p_dl_name}.azuredatalakestore.net/webhdfs/v1",
+			"servicePrincipalId": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "KeyVaultLinkedService",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": "adapp-processor-id"
+			},
+			"servicePrincipalKey": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "KeyVaultLinkedService",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": "adsp-processor-secret"
+			},
+			"tenant": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "KeyVaultLinkedService",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": "df-dap-tenant-id"
+			},
+			"subscriptionId": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "KeyVaultLinkedService",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": "df-dap-subscription-id"
+			},
+			"resourceGroupName": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "KeyVaultLinkedService",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": "df-dap-rg-name"
+			}
+		},
+		"parameters": {
+			"p_dl_name": {
+				"type": "String",
+				"defaultValue": ""
+			}
+		}
+	}
+}
